@@ -47,7 +47,16 @@
         </div>
         
         <div class="form-group">
-            <h2>3. Otros</h2>
+            <h2>3. Promociones</h2>
+            <button onclick="testPromotionsStatus()">📊 Estado Servicio Promociones</button>
+            <button onclick="testGetPromotions()">🎉 Obtener Promociones Activas</button>
+            <button onclick="testGetAllPromotions()">📋 Todas las Promociones (Admin)</button>
+            <button onclick="testGetValidPromotions()">✅ Promociones Vigentes</button>
+            <button onclick="testPromotionsWithoutToken()">🚫 Promociones Sin Token</button>
+        </div>
+        
+        <div class="form-group">
+            <h2>4. Otros</h2>
             <button onclick="clearResults()">🧹 Limpiar Resultados</button>
             <button onclick="logout()">🚪 Logout</button>
         </div>
@@ -189,6 +198,122 @@
         function logout() {
             authToken = null;
             addResult('🚪 Logout', { message: 'Token removido' }, 'info');
+        }
+        
+        // === FUNCIONES PARA PROMOCIONES ===
+        
+        async function testPromotionsStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/promotions/status`, {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Servicio Promociones Funcionando (Status: ${response.status})`, data, 'success');
+                } else {
+                    addResult(`❌ Error en Servicio Promociones (Status: ${response.status})`, data, 'error');
+                }
+            } catch (error) {
+                addResult('❌ Error de Red', { error: error.message }, 'error');
+            }
+        }
+        
+        async function testGetPromotions() {
+            if (!authToken) {
+                addResult('❌ No hay token', { message: 'Primero debes hacer login' }, 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/promotions`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Promociones Activas Obtenidas (Status: ${response.status})`, data, 'success');
+                } else {
+                    addResult(`❌ Error Obteniendo Promociones (Status: ${response.status})`, data, 'error');
+                }
+            } catch (error) {
+                addResult('❌ Error de Red', { error: error.message }, 'error');
+            }
+        }
+        
+        async function testGetAllPromotions() {
+            if (!authToken) {
+                addResult('❌ No hay token', { message: 'Primero debes hacer login' }, 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/promotions/all`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Todas las Promociones Obtenidas (Status: ${response.status})`, data, 'success');
+                } else {
+                    addResult(`❌ Error Obteniendo Todas las Promociones (Status: ${response.status})`, data, 'error');
+                }
+            } catch (error) {
+                addResult('❌ Error de Red', { error: error.message }, 'error');
+            }
+        }
+        
+        async function testGetValidPromotions() {
+            if (!authToken) {
+                addResult('❌ No hay token', { message: 'Primero debes hacer login' }, 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/promotions/valid`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addResult(`✅ Promociones Vigentes Obtenidas (Status: ${response.status})`, data, 'success');
+                } else {
+                    addResult(`❌ Error Obteniendo Promociones Vigentes (Status: ${response.status})`, data, 'error');
+                }
+            } catch (error) {
+                addResult('❌ Error de Red', { error: error.message }, 'error');
+            }
+        }
+        
+        async function testPromotionsWithoutToken() {
+            try {
+                const response = await fetch(`${API_BASE}/api/promotions`, {
+                    method: 'GET'
+                });
+                
+                const data = await response.json();
+                
+                if (response.status === 401 || response.status === 403) {
+                    addResult(`✅ Promociones Correctamente Bloqueadas (Status: ${response.status})`, data, 'success');
+                } else {
+                    addResult(`❌ ERROR: Permitió Acceso a Promociones Sin Token (Status: ${response.status})`, data, 'error');
+                }
+            } catch (error) {
+                addResult('❌ Error de Red', { error: error.message }, 'error');
+            }
         }
         
         // Test inicial al cargar la página
