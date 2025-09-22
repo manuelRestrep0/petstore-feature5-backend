@@ -1,62 +1,93 @@
-# Pet Store GraphQL Schema
+# Pet Store GraphQL Schema - Basado en esquema Supabase
 
 type Query {
-    # Test query
-    hello: String!
-    
-    # Get all pets
-    pets: [Pet!]!
-    
-    # Get pet by ID
-    pet(id: ID!): Pet
-    
     # Health check
     health: String!
+    
+    # Get all products (requires Marketing Admin role)
+    products: [Product!]!
+    
+    # Get product by ID
+    product(id: ID!): Product
+    
+    # Get all categories
+    categories: [Category!]!
+    
+    # Get all promotions (Marketing Admin only)
+    promotions: [Promotion!]!
 }
 
 type Mutation {
-    # Create a new pet
-    createPet(input: CreatePetInput!): Pet!
+    # Create a new promotion (Marketing Admin only)
+    createPromotion(input: CreatePromotionInput!): Promotion!
     
-    # Update a pet
-    updatePet(id: ID!, input: UpdatePetInput!): Pet
+    # Update a promotion (Marketing Admin only)
+    updatePromotion(id: ID!, input: UpdatePromotionInput!): Promotion
     
-    # Delete a pet
-    deletePet(id: ID!): Boolean!
+    # Delete a promotion (Marketing Admin only)
+    deletePromotion(id: ID!): Boolean!
 }
 
-type Pet {
-    id: ID!
-    name: String!
-    species: String!
-    breed: String
-    age: Int
-    price: Float!
-    description: String
-    imageUrl: String
-    available: Boolean!
-    createdAt: String!
-    updatedAt: String!
+type Product {
+    productId: ID!
+    productName: String!
+    basePrice: Float!
+    sku: Int!
+    category: Category!
+    promotion: Promotion
 }
 
-input CreatePetInput {
-    name: String!
-    species: String!
-    breed: String
-    age: Int
-    price: Float!
+type Category {
+    categoryId: ID!
+    categoryName: String!
     description: String
-    imageUrl: String
-    available: Boolean = true
 }
 
-input UpdatePetInput {
-    name: String
-    species: String
-    breed: String
-    age: Int
-    price: Float
+type Promotion {
+    promotionId: ID!
+    promotionName: String!
     description: String
-    imageUrl: String
-    available: Boolean
+    startDate: String!
+    endDate: String!
+    discountValue: Float!
+    status: Status!
+    user: User
+    category: Category
+}
+
+type Status {
+    statusId: ID!
+    statusName: String!
+}
+
+type User {
+    userId: ID!
+    userName: String!
+    email: String!
+    role: Role!
+}
+
+type Role {
+    roleId: ID!
+    roleName: String!
+}
+
+input CreatePromotionInput {
+    promotionName: String!
+    description: String
+    startDate: String!
+    endDate: String!
+    discountValue: Float!
+    statusId: Int!
+    categoryId: Int
+}
+
+input UpdatePromotionInput {
+    promotionName: String
+    description: String
+    startDate: String
+    endDate: String
+    discountValue: Float
+    statusId: Int
+    categoryId: Int
 }
