@@ -13,7 +13,7 @@ import java.util.List;
 public interface PromotionRepository extends JpaRepository<Promotion, Integer> {
     
     // Buscar promociones activas
-    @Query("SELECT p FROM Promotion p WHERE p.status.statusName = 'Active'")
+    @Query("SELECT p FROM Promotion p WHERE p.status.statusName = 'ACTIVE'")
     List<Promotion> findActivePromotions();
     
     // Buscar promociones por categoría
@@ -29,4 +29,13 @@ public interface PromotionRepository extends JpaRepository<Promotion, Integer> {
     // Buscar promociones por rango de descuento
     @Query("SELECT p FROM Promotion p WHERE p.discountValue >= :minDiscount AND p.discountValue <= :maxDiscount")
     List<Promotion> findByDiscountRange(@Param("minDiscount") Double minDiscount, @Param("maxDiscount") Double maxDiscount);
+
+    @Query("""
+    SELECT COUNT(p) FROM Promotion p
+    WHERE p.category.id = :categoryId
+      AND p.status.name = 'ACTIVE'
+      AND (p.startDate <= :endDate AND :startDate <= p.endDate)
+""")
+long countActiveOverlaps(Integer categoryId, java.time.LocalDate startDate, java.time.LocalDate endDate);
+
 }

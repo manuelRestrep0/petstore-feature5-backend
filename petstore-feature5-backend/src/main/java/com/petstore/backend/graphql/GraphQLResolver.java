@@ -11,6 +11,7 @@ import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
+import com.petstore.backend.dto.CreatePromotionInput;
 
 import java.util.List;
 import java.util.Map;
@@ -160,6 +161,15 @@ public class GraphQLResolver {
                 "token", "",
                 "user", Map.of()
             );
+        }
+    }
+    @MutationMapping
+    public Promotion createPromotion(@Argument CreatePromotionInput input) {
+        try {
+            return promotionService.createPromotion(input);
+        } catch (Exception e) {
+            System.err.println("Error creating promotion: " + e.getMessage());
+            throw e;
         }
     }
 

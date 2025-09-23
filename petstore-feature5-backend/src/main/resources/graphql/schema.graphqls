@@ -95,3 +95,17 @@ input PromotionInput {
     statusId: ID!
     categoryId: ID
 }
+
+input CreatePromotionInput {
+  promotionName: String!
+  description: String
+  startDate: String!
+  endDate: String!
+  discountValue: Float!
+  statusName: String  
+  categoryId: Int!
+}
+
+extend Mutation {
+  createPromotion(input: CreatePromotionInput!): Promotion!
+}
