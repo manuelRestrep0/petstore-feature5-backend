@@ -109,6 +109,48 @@ public class AuthService implements UserDetailsService {
     public boolean isMarketingAdmin(String email) {
         return userRepository.findMarketingAdminByEmail(email).isPresent();
     }
+
+    /**
+     * Login method para GraphQL que retorna Map
+     */
+    public Map<String, Object> login(String email, String password) {
+        try {
+            LoginResponse response = authenticateMarketingAdmin(email, password);
+            
+            // Convertir LoginResponse a Map para GraphQL
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", response.isSuccess());
+            result.put("token", response.getToken());
+            
+            // Obtener el usuario
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user != null) {
+                Map<String, Object> userMap = new HashMap<>();
+                userMap.put("userId", user.getUserId());
+                userMap.put("userName", user.getUserName());
+                userMap.put("email", user.getEmail());
+                
+                // Agregar role info
+                if (user.getRole() != null) {
+                    Map<String, Object> roleMap = new HashMap<>();
+                    roleMap.put("roleId", user.getRole().getRoleId());
+                    roleMap.put("roleName", user.getRole().getRoleName());
+                    userMap.put("role", roleMap);
+                }
+                
+                result.put("user", userMap);
+            }
+            
+            return result;
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("token", "");
+            errorResult.put("user", new HashMap<>());
+            return errorResult;
+        }
+    }
 }
 
 

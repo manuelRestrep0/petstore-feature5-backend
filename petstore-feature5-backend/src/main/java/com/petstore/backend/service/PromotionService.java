@@ -114,4 +114,35 @@ public class PromotionService {
         
         return dto;
     }
+
+    // === MÉTODOS PARA GRAPHQL que retornan entidades directamente ===
+
+    /**
+     * Obtiene todas las promociones activas como entidades para GraphQL
+     */
+    public List<Promotion> getAllActivePromotionsEntities() {
+        LocalDate today = LocalDate.now();
+        
+        // Buscar promociones activas
+        List<Promotion> activePromotions = promotionRepository.findActivePromotions();
+        
+        // Filtrar las que están vigentes (fecha actual entre start y end)
+        return activePromotions.stream()
+                .filter(promotion -> !today.isBefore(promotion.getStartDate()) && !today.isAfter(promotion.getEndDate()))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Obtiene promociones por categoría como entidades para GraphQL
+     */
+    public List<Promotion> getPromotionsByCategoryEntities(Integer categoryId) {
+        return promotionRepository.findByCategoryCategoryId(categoryId);
+    }
+
+    /**
+     * Obtiene una promoción por ID como entidad para GraphQL
+     */
+    public Promotion getPromotionByIdEntity(Integer id) {
+        return promotionRepository.findById(id).orElse(null);
+    }
 }

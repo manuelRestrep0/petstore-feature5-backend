@@ -4,27 +4,32 @@ type Query {
     # Health check
     health: String!
     
-    # Get all products (requires Marketing Admin role)
-    products: [Product!]!
+    # Queries de autenticación
+    currentUser: User
     
-    # Get product by ID
-    product(id: ID!): Product
-    
-    # Get all categories
-    categories: [Category!]!
-    
-    # Get all promotions (Marketing Admin only)
+    # Queries de promociones
     promotions: [Promotion!]!
+    promotionsActive: [Promotion!]!
+    promotionsByCategory(categoryId: ID!): [Promotion!]!
+    promotion(id: ID!): Promotion
+    
+    # Queries de categorías
+    categories: [Category!]!
+    category(id: ID!): Category
+    
+    # Queries de productos
+    products: [Product!]!
+    productsByCategory(categoryId: ID!): [Product!]!
+    product(id: ID!): Product
 }
 
 type Mutation {
-    # Create a new promotion (Marketing Admin only)
-    createPromotion(input: CreatePromotionInput!): Promotion!
+    # Mutaciones de autenticación
+    login(email: String!, password: String!): LoginResponse!
     
-    # Update a promotion (Marketing Admin only)
-    updatePromotion(id: ID!, input: UpdatePromotionInput!): Promotion
-    
-    # Delete a promotion (Marketing Admin only)
+    # Mutaciones de promociones (solo admin)
+    createPromotion(input: PromotionInput!): Promotion!
+    updatePromotion(id: ID!, input: PromotionInput!): Promotion!
     deletePromotion(id: ID!): Boolean!
 }
 
@@ -41,6 +46,8 @@ type Category {
     categoryId: ID!
     categoryName: String!
     description: String
+    promotions: [Promotion!]!
+    products: [Product!]!
 }
 
 type Promotion {
@@ -53,6 +60,7 @@ type Promotion {
     status: Status!
     user: User
     category: Category
+    products: [Product!]!
 }
 
 type Status {
@@ -72,22 +80,18 @@ type Role {
     roleName: String!
 }
 
-input CreatePromotionInput {
+type LoginResponse {
+    token: String!
+    user: User!
+    success: Boolean!
+}
+
+input PromotionInput {
     promotionName: String!
     description: String
     startDate: String!
     endDate: String!
     discountValue: Float!
-    statusId: Int!
-    categoryId: Int
-}
-
-input UpdatePromotionInput {
-    promotionName: String
-    description: String
-    startDate: String
-    endDate: String
-    discountValue: Float
-    statusId: Int
-    categoryId: Int
+    statusId: ID!
+    categoryId: ID
 }
