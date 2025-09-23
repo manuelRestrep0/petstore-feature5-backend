@@ -25,7 +25,7 @@ type Query {
 
 type Mutation {
     # Mutaciones de autenticación
-    login(email: String!, password: String!): LoginResponse!
+    login(email: String!, password: String!): GraphQLLoginResponse!
     
     # Mutaciones de promociones (solo admin)
     createPromotion(input: PromotionInput!): Promotion!
@@ -80,7 +80,7 @@ type Role {
     roleName: String!
 }
 
-type LoginResponse {
+type GraphQLLoginResponse {
     token: String!
     user: User!
     success: Boolean!
