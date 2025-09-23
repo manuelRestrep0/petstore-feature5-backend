@@ -13,7 +13,7 @@ import java.util.List;
 public interface PromotionRepository extends JpaRepository<Promotion, Integer> {
     
     // Buscar promociones activas
-    @Query("SELECT p FROM Promotion p WHERE p.status.statusName = 'Active'")
+    @Query("SELECT p FROM Promotion p WHERE p.status.statusName = 'ACTIVE'")
     List<Promotion> findActivePromotions();
     
     // Buscar promociones por categoría

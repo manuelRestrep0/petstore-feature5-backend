@@ -66,7 +66,10 @@ public class SecurityConfig {
                 // Configurar autorización de endpoints
                 .authorizeHttpRequests(authz -> authz
                     // Endpoints de autenticación (públicos)
-                    .requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/api/auth/**").authenticated() 
+                    
+                    // Endpoints de productos (públicos para pruebas - CAMBIAR SEGÚN NECESIDAD)
+                    .requestMatchers("/api/products/**").authenticated()  // 🔓 ENDPOINTS DE PRODUCTOS PÚBLICOS
                     
                     // Endpoints de promociones (requieren autenticación)
                     .requestMatchers("/api/promotions/status").permitAll() // Status público

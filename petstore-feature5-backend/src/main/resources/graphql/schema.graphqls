@@ -1,4 +1,4 @@
-# Pet Store GraphQL Schema - Basado en esquema Supabase
+# Pet Store GraphQL Schema - Basado en esquema Neon
 
 type Query {
     # Health check
@@ -82,7 +82,7 @@ type Role {
 
 type GraphQLLoginResponse {
     token: String!
-    user: User!
+    user: User
     success: Boolean!
 }
 
@@ -93,5 +93,6 @@ input PromotionInput {
     endDate: String!
     discountValue: Float!
     statusId: ID!
+    userId: ID
     categoryId: ID
 }

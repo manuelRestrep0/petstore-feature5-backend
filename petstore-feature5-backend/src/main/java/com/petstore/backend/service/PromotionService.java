@@ -3,7 +3,13 @@ package com.petstore.backend.service;
 import com.petstore.backend.dto.CategoryDTO;
 import com.petstore.backend.dto.PromotionDTO;
 import com.petstore.backend.entity.Promotion;
+import com.petstore.backend.entity.Status;
+import com.petstore.backend.entity.User;
+import com.petstore.backend.entity.Category;
 import com.petstore.backend.repository.PromotionRepository;
+import com.petstore.backend.repository.StatusRepository;
+import com.petstore.backend.repository.UserRepository;
+import com.petstore.backend.repository.CategoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +23,15 @@ public class PromotionService {
 
     @Autowired
     private PromotionRepository promotionRepository;
+    
+    @Autowired
+    private StatusRepository statusRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     /**
      * Obtiene todas las promociones activas y vigentes
@@ -144,5 +159,94 @@ public class PromotionService {
      */
     public Promotion getPromotionByIdEntity(Integer id) {
         return promotionRepository.findById(id).orElse(null);
+    }
+
+    // === MÉTODOS CRUD PARA MUTACIONES ===
+
+    /**
+     * Crea una nueva promoción
+     */
+    public Promotion createPromotion(String promotionName, String description, 
+                                   LocalDate startDate, LocalDate endDate, 
+                                   Double discountValue, Integer statusId, 
+                                   Integer userId, Integer categoryId) {
+        Promotion promotion = new Promotion();
+        promotion.setPromotionName(promotionName);
+        promotion.setDescription(description);
+        promotion.setStartDate(startDate);
+        promotion.setEndDate(endDate);
+        promotion.setDiscountValue(discountValue);
+        
+        // Buscar y asignar entidades relacionadas
+        if (statusId != null) {
+            Status status = statusRepository.findById(statusId).orElse(null);
+            promotion.setStatus(status);
+        }
+        
+        if (userId != null) {
+            User user = userRepository.findById(userId).orElse(null);
+            promotion.setUser(user);
+        }
+        
+        if (categoryId != null) {
+            Category category = categoryRepository.findById(categoryId).orElse(null);
+            promotion.setCategory(category);
+        }
+        
+        return promotionRepository.save(promotion);
+    }
+
+    /**
+     * Actualiza una promoción existente
+     */
+    public Promotion updatePromotion(Integer promotionId, String promotionName, String description,
+                                   LocalDate startDate, LocalDate endDate,
+                                   Double discountValue, Integer statusId,
+                                   Integer userId, Integer categoryId) {
+        Promotion promotion = promotionRepository.findById(promotionId).orElse(null);
+        if (promotion == null) {
+            return null;
+        }
+        
+        // Actualizar campos
+        if (promotionName != null) promotion.setPromotionName(promotionName);
+        if (description != null) promotion.setDescription(description);
+        if (startDate != null) promotion.setStartDate(startDate);
+        if (endDate != null) promotion.setEndDate(endDate);
+        if (discountValue != null) promotion.setDiscountValue(discountValue);
+        
+        // Actualizar entidades relacionadas
+        if (statusId != null) {
+            Status status = statusRepository.findById(statusId).orElse(null);
+            promotion.setStatus(status);
+        }
+        
+        if (userId != null) {
+            User user = userRepository.findById(userId).orElse(null);
+            promotion.setUser(user);
+        }
+        
+        if (categoryId != null) {
+            Category category = categoryRepository.findById(categoryId).orElse(null);
+            promotion.setCategory(category);
+        }
+        
+        return promotionRepository.save(promotion);
+    }
+
+    /**
+     * Elimina una promoción
+     */
+    public boolean deletePromotion(Integer promotionId) {
+        try {
+            if (promotionRepository.existsById(promotionId)) {
+                promotionRepository.deleteById(promotionId);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            System.err.println("Error deleting promotion: " + e.getMessage());
+            return false;
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.petstore.backend.graphql;
 
 import com.petstore.backend.entity.*;
 import com.petstore.backend.dto.GraphQLLoginResponse;
+import com.petstore.backend.dto.PromotionInput;
 import com.petstore.backend.service.AuthService;
 import com.petstore.backend.service.PromotionService;
 import com.petstore.backend.repository.*;
@@ -158,10 +159,13 @@ public class GraphQLResolver {
                 if (user != null) {
                     System.out.println("REAL DB: User found: " + user.getEmail() + ", Role: " + 
                         (user.getRole() != null ? user.getRole().getRoleName() : "NULL"));
+                    System.out.println("REAL DB: User password from DB: " + user.getPassword());
+                    System.out.println("REAL DB: Password provided by user: " + password);
 
-                    // Verificar contraseña
-                    if (!"admin123".equals(password)) {
-                        System.out.println("REAL DB: Authentication failed for user: " + email);
+                    // Verificar contraseña - comparar con la contraseña almacenada en la BD
+                    // Por ahora las contraseñas están en texto plano para pruebas
+                    if (!user.getPassword().equals(password)) {
+                        System.out.println("REAL DB: Authentication failed for user: " + email + " - incorrect password");
                         return new GraphQLLoginResponse("", null, false);
                     }
 
@@ -203,6 +207,78 @@ public class GraphQLResolver {
             System.err.println("Error in GraphQL login: " + e.getMessage());
             e.printStackTrace();
             return new GraphQLLoginResponse("", null, false);
+        }
+    }
+
+    // === PROMOTION MUTATIONS ===
+
+    @MutationMapping
+    public Promotion createPromotion(@Argument PromotionInput input) {
+        try {
+            System.out.println("Creating promotion with input: " + input);
+            
+            return promotionService.createPromotion(
+                input.getPromotionName(),
+                input.getDescription(),
+                input.getStartDateAsLocalDate(),
+                input.getEndDateAsLocalDate(),
+                input.getDiscountValue(),
+                input.getStatusId(),
+                input.getUserId(),
+                input.getCategoryId()
+            );
+        } catch (Exception e) {
+            System.err.println("Error creating promotion: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to create promotion: " + e.getMessage());
+        }
+    }
+
+    @MutationMapping
+    public Promotion updatePromotion(@Argument Integer id, @Argument PromotionInput input) {
+        try {
+            System.out.println("Updating promotion " + id + " with input: " + input);
+            
+            Promotion updated = promotionService.updatePromotion(
+                id,
+                input.getPromotionName(),
+                input.getDescription(),
+                input.getStartDateAsLocalDate(),
+                input.getEndDateAsLocalDate(),
+                input.getDiscountValue(),
+                input.getStatusId(),
+                input.getUserId(),
+                input.getCategoryId()
+            );
+            
+            if (updated == null) {
+                throw new RuntimeException("Promotion not found with id: " + id);
+            }
+            
+            return updated;
+        } catch (Exception e) {
+            System.err.println("Error updating promotion: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to update promotion: " + e.getMessage());
+        }
+    }
+
+    @MutationMapping
+    public Boolean deletePromotion(@Argument Integer id) {
+        try {
+            System.out.println("Deleting promotion with id: " + id);
+            
+            boolean deleted = promotionService.deletePromotion(id);
+            
+            if (!deleted) {
+                throw new RuntimeException("Promotion not found with id: " + id);
+            }
+            
+            return true;
+        } catch (Exception e) {
+            System.err.println("Error deleting promotion: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to delete promotion: " + e.getMessage());
         }
     }
 
