@@ -283,7 +283,9 @@ public class GraphQLResolver {
     }
 
     // === SCHEMA MAPPINGS para resolver relaciones ===
-
+    // Nota: Con los DTOs de respuesta, estas relaciones ya están aplanadas
+    // Estos métodos pueden ser opcionales si usas solo los DTOs de respuesta
+    
     @SchemaMapping(typeName = "Promotion", field = "products")
     public List<Product> promotionProducts(Promotion promotion) {
         try {

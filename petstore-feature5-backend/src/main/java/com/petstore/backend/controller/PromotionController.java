@@ -2,6 +2,9 @@ package com.petstore.backend.controller;
 
 import com.petstore.backend.dto.PromotionDTO;
 import com.petstore.backend.dto.PromotionListResponse;
+import com.petstore.backend.dto.PromotionResponseDTO;
+import com.petstore.backend.entity.Promotion;
+import com.petstore.backend.mapper.MapperFacade;
 import com.petstore.backend.service.PromotionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +19,9 @@ public class PromotionController {
 
     @Autowired
     private PromotionService promotionService;
+    
+    @Autowired
+    private MapperFacade mapperFacade;
 
     /**
      * Obtiene todas las promociones activas y vigentes

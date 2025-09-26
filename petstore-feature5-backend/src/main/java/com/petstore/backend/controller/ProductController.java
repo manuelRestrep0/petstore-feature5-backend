@@ -2,7 +2,9 @@ package com.petstore.backend.controller;
 
 import com.petstore.backend.dto.CategoryDTO;
 import com.petstore.backend.dto.ProductDTO;
+import com.petstore.backend.dto.ProductResponseDTO;
 import com.petstore.backend.entity.Product;
+import com.petstore.backend.mapper.MapperFacade;
 import com.petstore.backend.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,18 +23,19 @@ public class ProductController {
 
     @Autowired
     private ProductService productService;
+    
+    @Autowired
+    private MapperFacade mapperFacade;
 
     /**
      * GET /api/products
-     * Lista todos los productos disponibles
+     * Lista todos los productos disponibles usando MapStruct
      */
     @GetMapping
-    public ResponseEntity<List<ProductDTO>> getAllProducts() {
+    public ResponseEntity<List<ProductResponseDTO>> getAllProducts() {
         try {
             List<Product> products = productService.findAll();
-            List<ProductDTO> productDTOs = products.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+            List<ProductResponseDTO> productDTOs = mapperFacade.getProductMapper().toResponseDTOList(products);
             return ResponseEntity.ok(productDTOs);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
@@ -41,15 +44,13 @@ public class ProductController {
 
     /**
      * GET /api/products/category/{categoryId}
-     * Lista todos los productos de una categoría específica
+     * Lista todos los productos de una categoría específica usando MapStruct
      */
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<List<ProductDTO>> getProductsByCategory(@PathVariable Integer categoryId) {
+    public ResponseEntity<List<ProductResponseDTO>> getProductsByCategory(@PathVariable Integer categoryId) {
         try {
             List<Product> products = productService.findByCategoryId(categoryId);
-            List<ProductDTO> productDTOs = products.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+            List<ProductResponseDTO> productDTOs = mapperFacade.getProductMapper().toResponseDTOList(products);
             return ResponseEntity.ok(productDTOs);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
@@ -58,14 +59,15 @@ public class ProductController {
 
     /**
      * GET /api/products/{id}
-     * Obtiene un producto específico por su ID
+     * Obtiene un producto específico por su ID usando MapStruct
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ProductDTO> getProductById(@PathVariable Integer id) {
+    public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable Integer id) {
         try {
             Optional<Product> product = productService.findById(id);
             if (product.isPresent()) {
-                return ResponseEntity.ok(convertToDTO(product.get()));
+                ProductResponseDTO productDTO = mapperFacade.getProductMapper().toResponseDTO(product.get());
+                return ResponseEntity.ok(productDTO);
             } else {
                 return ResponseEntity.notFound().build();
             }

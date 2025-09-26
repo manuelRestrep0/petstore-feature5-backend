@@ -32,9 +32,32 @@ Sistema backend para gestión de promociones en petstore que incluye:
 - **API Dual**: REST + GraphQL para máxima flexibilidad
 - **Base de Datos**: PostgreSQL en Neon con migraciones Flyway
 - **Seguridad**: Spring Security 6.x con BCrypt
+- **Capa de Mappers**: MapStruct para transformaciones seguras de datos
 - **Documentación**: GraphiQL integrado para pruebas
 - **Testing**: Scripts automatizados de pruebas
 - **CORS**: Configurado para desarrollo frontend
+
+## 🗺️ Arquitectura de Mappers
+
+El proyecto implementa una **capa de mappers profesional** usando **MapStruct**:
+
+### Mappers Implementados:
+- **UserMapper**: Convierte entidades User a DTOs seguros (sin password)
+- **PromotionMapper**: Mapeo completo con relaciones aplanadas
+- **ProductMapper**: Transformaciones con cálculo de precios
+- **CategoryMapper**: Mapeo bidireccional de categorías
+- **MapperFacade**: Acceso centralizado a todos los mappers
+
+### DTOs de Respuesta:
+- **UserResponseDTO**: Usuario sin información sensible
+- **PromotionResponseDTO**: Promoción con datos optimizados
+- **ProductResponseDTO**: Producto con precio final calculado
+
+### Beneficios:
+- ✅ **Seguridad**: No expone passwords ni datos sensibles
+- ✅ **Performance**: Relaciones aplanadas evitan lazy loading
+- ✅ **Mantenibilidad**: Código generado automáticamente
+- ✅ **Separación de capas**: Entities ≠ DTOs
 
 ## 🛠️ Tecnologías
 
@@ -46,9 +69,30 @@ Sistema backend para gestión de promociones en petstore que incluye:
 - **PostgreSQL** (Neon Database)
 - **Flyway** (Migraciones)
 - **JWT** (Autenticación)
+- **MapStruct** (Mapeo de objetos)
 - **Maven** (Gestión de dependencias)
 
-## 🚀 Instalación
+## � Endpoints con Mappers
+
+### REST API (Usando MapStruct):
+```
+GET  /api/products         → ProductResponseDTO[]
+GET  /api/products/{id}    → ProductResponseDTO
+POST /api/products         → ProductResponseDTO
+PUT  /api/products/{id}    → ProductResponseDTO
+```
+
+### GraphQL (Entities directas):
+```graphql
+query {
+  products { id, name, price, category { categoryName } }
+  promotions { id, title, user { userName } }
+}
+```
+
+**Nota**: GraphQL mantiene entities para compatibilidad, REST usa DTOs seguros.
+
+## �🚀 Instalación
 
 ### Prerrequisitos
 
@@ -144,6 +188,44 @@ mvn clean package
 java -jar target/petstore-feature5-backend-0.0.1-SNAPSHOT.jar
 ```
 
+## 🛠️ Uso de MapStruct
+
+### Ejemplo en Controller:
+```java
+@RestController
+@RequestMapping("/api/products")
+public class ProductController {
+    
+    @Autowired
+    private ProductMapper productMapper;
+    
+    @GetMapping
+    public List<ProductResponseDTO> getAllProducts() {
+        List<Product> products = productService.findAll();
+        return productMapper.toResponseDTOList(products); // 🔄 Mapeo automático
+    }
+}
+```
+
+### Ejemplo en Service:
+```java
+@Service
+public class ProductService {
+    
+    @Autowired
+    private MapperFacade mapperFacade; // 🎯 Acceso centralizado
+    
+    public ProductResponseDTO createProduct(CreateProductInput input) {
+        Product entity = mapperFacade.getProductMapper().toEntity(input);
+        Product saved = productRepository.save(entity);
+        return mapperFacade.getProductMapper().toResponseDTO(saved);
+    }
+}
+```
+
+### Generación Automática:
+MapStruct genera **automáticamente** las implementaciones en `/target/generated-sources/annotations/`
+
 ## 🌐 API Endpoints
 
 ### Autenticación
@@ -163,17 +245,17 @@ java -jar target/petstore-feature5-backend-0.0.1-SNAPSHOT.jar
 | PUT | `/api/promotions/{id}` | Actualizar promoción | Sí |
 | DELETE | `/api/promotions/{id}` | Eliminar promoción | Sí |
 
-### 📦 Productos (NUEVOS ENDPOINTS)
+### 📦 Productos (CON MAPSTRUCT)
 
-| Método | Endpoint | Descripción | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/products` | **📋 Listar todos los productos** | No |
-| GET | `/api/products/category/{categoryId}` | **🏷️ Productos por categoría específica** | No |
-| GET | `/api/products/{id}` | Obtener producto por ID | No |
-| POST | `/api/products` | Crear nuevo producto | Sí |
-| PUT | `/api/products/{id}` | Actualizar producto | Sí |
-| DELETE | `/api/products/{id}` | Eliminar producto | Sí |
-| GET | `/api/products/search?name={nombre}` | 🔍 Buscar productos por nombre | No |
+| Método | Endpoint | Descripción | Auth | Return |
+|--------|----------|-------------|------|--------|
+| GET | `/api/products` | **📋 Listar todos los productos** | No | `ProductResponseDTO[]` |
+| GET | `/api/products/category/{categoryId}` | **🏷️ Productos por categoría específica** | No | `ProductResponseDTO[]` |
+| GET | `/api/products/{id}` | Obtener producto por ID | No | `ProductResponseDTO` |
+| POST | `/api/products` | Crear nuevo producto | Sí | `ProductResponseDTO` |
+| PUT | `/api/products/{id}` | Actualizar producto | Sí | `ProductResponseDTO` |
+| DELETE | `/api/products/{id}` | Eliminar producto | Sí | `void` |
+| GET | `/api/products/search?name={nombre}` | 🔍 Buscar productos por nombre | No | `ProductResponseDTO[]` |
 | GET | `/api/products/price-range?minPrice={min}&maxPrice={max}` | 💰 Productos por rango de precios | No |
 
 ### Ejemplo de Uso REST
@@ -755,6 +837,21 @@ psql "postgresql://username:password@host/database?sslmode=require"
 # O usando herramientas gráficas como pgAdmin, DBeaver, etc.
 # Simplemente ejecutar el contenido de data-seed.sql
 ```
+
+## 🔄 REST vs GraphQL: Estrategia de Mappers
+
+### 🎯 **¿Por qué doble estrategia?**
+
+| Aspecto | REST (con DTOs) | GraphQL (con Entities) |
+|---------|-----------------|------------------------|
+| **Seguridad** | ✅ DTOs sin passwords | ⚠️ Entities completas |
+| **Performance** | ✅ Relaciones aplanadas | ✅ Solo campos pedidos |
+| **Frontend** | 🎯 Datos optimizados | 🎯 Queries flexibles |
+| **Mantenimiento** | ✅ MapStruct automático | ✅ Schema GraphQL |
+
+### **Recomendación de Uso:**
+- **REST**: Apps móviles, APIs públicas, integraciones
+- **GraphQL**: Admin panels, reportes complejos, desarrollo rápido
 
 ### Esquema de Base de Datos
 
