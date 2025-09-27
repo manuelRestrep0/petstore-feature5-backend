@@ -1,34 +1,36 @@
 package com.petstore.backend.config;
 
+import com.petstore.backend.config.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 public class SecurityConfig {
 
     private final CorsConfigurationSource corsConfigurationSource;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final Environment environment;
 
-    @Value("${app.security.whitelist}")
+    @Value("${app.security.whitelist:}")
     private String[] whitelistEndpoints;
 
     public SecurityConfig(CorsConfigurationSource corsConfigurationSource, 
-                         @Lazy JwtAuthenticationFilter jwtAuthenticationFilter) {
+                         JwtAuthenticationFilter jwtAuthenticationFilter,
+                         Environment environment) {
         this.corsConfigurationSource = corsConfigurationSource;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.environment = environment;
     }
 
     @Bean
@@ -64,43 +66,63 @@ public class SecurityConfig {
                 )
                 
                 // Configurar autorización de endpoints
-                .authorizeHttpRequests(authz -> authz
-                    // Endpoints de autenticación (públicos)
-                    .requestMatchers("/api/auth/**").authenticated() 
+                .authorizeHttpRequests(authz -> {
+                    // Endpoints básicos siempre públicos
+                    authz.requestMatchers("/api/auth/login", "/api/auth/register").permitAll();
+                    authz.requestMatchers("/actuator/health").permitAll();
                     
-                    // Endpoints de productos (públicos para pruebas - CAMBIAR SEGÚN NECESIDAD)
-                    .requestMatchers("/api/products/**").authenticated()  // 🔓 ENDPOINTS DE PRODUCTOS PÚBLICOS
+                    // Verificar si estamos en modo desarrollo
+                    String[] activeProfiles = environment.getActiveProfiles();
+                    boolean isProduction = activeProfiles.length > 0 && 
+                                         java.util.Arrays.asList(activeProfiles).contains("prod");
+                    boolean isDevelopment = !isProduction;
                     
-                    // Endpoints de promociones (requieren autenticación)
-                    .requestMatchers("/api/promotions/status").permitAll() // Status público
-                    .requestMatchers("/api/promotions/**").authenticated() // Resto requiere auth
+                    if (isDevelopment) {
+                        // 🔓 MODO DESARROLLO: Más permisivo
+                        authz.requestMatchers("/graphiql", "/graphiql/**").permitAll(); // GraphiQL para dev
+                        authz.requestMatchers("/graphql", "/graphql/**").permitAll(); // GraphQL público en dev
+                        authz.requestMatchers("/h2-console/**").permitAll(); // H2 Console para dev
+                        authz.requestMatchers("/actuator/**").permitAll(); // Actuator para dev
+                        authz.requestMatchers("/test", "/graphql-test").permitAll(); // Test endpoints
+                        
+                        // Productos públicos para testing en desarrollo
+                        authz.requestMatchers("GET", "/api/products/**").permitAll();
+                        authz.requestMatchers("POST", "/api/products/**").authenticated(); // Crear requiere auth
+                        authz.requestMatchers("PUT", "/api/products/**").authenticated(); // Actualizar requiere auth
+                        authz.requestMatchers("DELETE", "/api/products/**").authenticated(); // Eliminar requiere auth
+                        
+                    } else {
+                        // 🔒 MODO PRODUCCIÓN: Más restrictivo
+                        authz.requestMatchers("/graphiql/**").denyAll(); // ❌ No GraphiQL en producción
+                        authz.requestMatchers("/h2-console/**").denyAll(); // ❌ No H2 en producción
+                        authz.requestMatchers("/test", "/graphql-test").denyAll(); // ❌ No test endpoints
+                        
+                        // GraphQL requiere autenticación en producción
+                        authz.requestMatchers("/graphql", "/graphql/**").authenticated();
+                        
+                        // Solo actuator health público en producción
+                        authz.requestMatchers("/actuator/**").authenticated();
+                        
+                        // Productos: solo lectura pública, modificaciones requieren auth
+                        authz.requestMatchers("GET", "/api/products", "/api/products/category/*").permitAll();
+                        authz.requestMatchers("/api/products/**").authenticated();
+                    }
                     
-                    // Endpoints de GraphQL (públicos por ahora)
-                    .requestMatchers("/graphql", "/graphql/**").permitAll()
-                    .requestMatchers("/graphiql", "/graphiql/**").permitAll()
+                    // Promociones siempre requieren autenticación
+                    authz.requestMatchers("/api/promotions/**").authenticated();
                     
-                    // Endpoints de Actuator
-                    .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                    .requestMatchers("/actuator/**").authenticated()
+                    // Perfil de usuario siempre requiere autenticación
+                    authz.requestMatchers("/api/auth/me").authenticated();
                     
-                    // H2 Console (solo para desarrollo)
-                    .requestMatchers("/h2-console/**").permitAll()
+                    // Whitelist adicional si está configurada
+                    if (whitelistEndpoints != null && whitelistEndpoints.length > 0) {
+                        authz.requestMatchers(whitelistEndpoints).permitAll();
+                    }
                     
-                    // Test endpoints
-                    .requestMatchers("/test", "/graphql-test").permitAll()
-                    
-                    // Whitelist adicional de endpoints públicos
-                    .requestMatchers(whitelistEndpoints).permitAll()
-                    
-                    // Todos los demás endpoints requieren autenticación
-                    .anyRequest().authenticated()
-                )
+                    // Todo lo demás requiere autenticación
+                    authz.anyRequest().authenticated();
+                })
                 
                 .build();
-    }
-    
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
     }
 }
