@@ -1,11 +1,8 @@
 package com.petstore.backend.graphql;
 
-import com.petstore.backend.entity.*;
-import com.petstore.backend.dto.GraphQLLoginResponse;
-import com.petstore.backend.dto.PromotionInput;
-import com.petstore.backend.service.AuthService;
-import com.petstore.backend.service.PromotionService;
-import com.petstore.backend.repository.*;
+import java.util.Collections;
+import java.util.List;
+
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -14,8 +11,19 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 
-import java.util.List;
-import java.util.Collections;
+import com.petstore.backend.dto.LoginResponse;
+import com.petstore.backend.dto.PromotionDTO;
+import com.petstore.backend.entity.Category;
+import com.petstore.backend.entity.Product;
+import com.petstore.backend.entity.Promotion;
+import com.petstore.backend.entity.Role;
+import com.petstore.backend.entity.User;
+import com.petstore.backend.repository.CategoryRepository;
+import com.petstore.backend.repository.ProductRepository;
+import com.petstore.backend.repository.PromotionRepository;
+import com.petstore.backend.repository.UserRepository;
+import com.petstore.backend.service.AuthService;
+import com.petstore.backend.service.PromotionService;
 
 @Controller
 public class GraphQLResolver {
@@ -149,7 +157,7 @@ public class GraphQLResolver {
     // === MUTATIONS ===
 
     @MutationMapping
-    public GraphQLLoginResponse login(@Argument String email, @Argument String password) {
+    public LoginResponse login(@Argument String email, @Argument String password) {
         try {
             System.out.println("GraphQL Login attempt for email: " + email);
             
@@ -166,13 +174,23 @@ public class GraphQLResolver {
                     // Por ahora las contraseñas están en texto plano para pruebas
                     if (!user.getPassword().equals(password)) {
                         System.out.println("REAL DB: Authentication failed for user: " + email + " - incorrect password");
-                        return new GraphQLLoginResponse("", null, false);
+                        LoginResponse response = new LoginResponse();
+                        response.setSuccess(false);
+                        response.setMessage("Invalid credentials");
+                        return response;
                     }
 
                     String token = "jwt-real-" + System.currentTimeMillis();
                     System.out.println("REAL DB: Login successful, token: " + token);
                     
-                    return new GraphQLLoginResponse(token, user, true);
+                    LoginResponse response = new LoginResponse();
+                    response.setToken(token);
+                    response.setUserName(user.getUserName());
+                    response.setEmail(user.getEmail());
+                    response.setRole(user.getRole() != null ? user.getRole().getRoleName() : "USER");
+                    response.setSuccess(true);
+                    response.setMessage("Login successful");
+                    return response;
                 }
             } catch (Exception dbError) {
                 System.out.println("BD CONNECTION ERROR: " + dbError.getMessage());
@@ -196,36 +214,50 @@ public class GraphQLResolver {
                     String token = "jwt-mock-fallback-" + System.currentTimeMillis();
                     System.out.println("MOCK FALLBACK: Login successful, token: " + token);
                     
-                    return new GraphQLLoginResponse(token, mockUser, true);
+                    LoginResponse response = new LoginResponse();
+                    response.setToken(token);
+                    response.setUserName(mockUser.getUserName());
+                    response.setEmail(mockUser.getEmail());
+                    response.setRole(mockRole.getRoleName());
+                    response.setSuccess(true);
+                    response.setMessage("Login successful (Mock)");
+                    return response;
                 }
             }
             
             System.out.println("Login failed - invalid credentials or user not found");
-            return new GraphQLLoginResponse("", null, false);
+            LoginResponse response = new LoginResponse();
+            response.setSuccess(false);
+            response.setMessage("Invalid credentials or user not found");
+            return response;
             
         } catch (Exception e) {
             System.err.println("Error in GraphQL login: " + e.getMessage());
             e.printStackTrace();
-            return new GraphQLLoginResponse("", null, false);
+            LoginResponse response = new LoginResponse();
+            response.setSuccess(false);
+            response.setMessage("Login error: " + e.getMessage());
+            return response;
         }
     }
 
     // === PROMOTION MUTATIONS ===
 
     @MutationMapping
-    public Promotion createPromotion(@Argument PromotionInput input) {
+    public Promotion createPromotion(@Argument PromotionDTO input) {
         try {
             System.out.println("Creating promotion with input: " + input);
             
+            // Usar el método existente createPromotion del service
             return promotionService.createPromotion(
                 input.getPromotionName(),
                 input.getDescription(),
-                input.getStartDateAsLocalDate(),
-                input.getEndDateAsLocalDate(),
-                input.getDiscountValue(),
-                input.getStatusId(),
-                input.getUserId(),
-                input.getCategoryId()
+                input.getStartDate().toLocalDate(),
+                input.getEndDate().toLocalDate(),
+                input.getDiscountPercentage().doubleValue(),
+                1, // statusId por defecto
+                1, // userId por defecto  
+                input.getCategory() != null ? input.getCategory().getCategoryId() : null
             );
         } catch (Exception e) {
             System.err.println("Error creating promotion: " + e.getMessage());
@@ -235,25 +267,24 @@ public class GraphQLResolver {
     }
 
     @MutationMapping
-    public Promotion updatePromotion(@Argument Integer id, @Argument PromotionInput input) {
+    public Promotion updatePromotion(@Argument Integer id, @Argument PromotionDTO input) {
         try {
             System.out.println("Updating promotion " + id + " with input: " + input);
             
+            // Usar el método existente updatePromotion del service
             Promotion updated = promotionService.updatePromotion(
                 id,
                 input.getPromotionName(),
                 input.getDescription(),
-                input.getStartDateAsLocalDate(),
-                input.getEndDateAsLocalDate(),
-                input.getDiscountValue(),
-                input.getStatusId(),
-                input.getUserId(),
-                input.getCategoryId()
+                input.getStartDate().toLocalDate(),
+                input.getEndDate().toLocalDate(),
+                input.getDiscountPercentage().doubleValue(),
+                1, // statusId por defecto
+                1, // userId por defecto
+                input.getCategory() != null ? input.getCategory().getCategoryId() : null
             );
             
-            if (updated == null) {
-                throw new RuntimeException("Promotion not found with id: " + id);
-            }
+
             
             return updated;
         } catch (Exception e) {

@@ -1,7 +1,6 @@
 package com.petstore.backend.mapper;
 
-import com.petstore.backend.dto.PromotionInput;
-import com.petstore.backend.dto.PromotionResponseDTO;
+import com.petstore.backend.dto.PromotionDTO;
 import com.petstore.backend.entity.Promotion;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -9,7 +8,7 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.factory.Mappers;
 
 /**
- * Mapper para transformaciones Promotion <-> DTOs
+ * Mapper para transformaciones Promotion <-> PromotionDTO
  */
 @Mapper(componentModel = "spring")
 public interface PromotionMapper {
@@ -17,40 +16,41 @@ public interface PromotionMapper {
     PromotionMapper INSTANCE = Mappers.getMapper(PromotionMapper.class);
 
     /**
-     * Convierte una entidad Promotion a PromotionResponseDTO
-     * Aplana las relaciones para evitar lazy loading en GraphQL
+     * Convierte una entidad Promotion a PromotionDTO
      */
-    @Mapping(target = "statusName", source = "status.statusName")
-    @Mapping(target = "userName", source = "user.userName")
-    @Mapping(target = "categoryName", source = "category.categoryName")
-    PromotionResponseDTO toResponseDTO(Promotion promotion);
+    @Mapping(target = "discountPercentage", expression = "java(java.math.BigDecimal.valueOf(promotion.getDiscountValue()))")
+    @Mapping(target = "status", expression = "java(promotion.getStatus() != null ? promotion.getStatus().getStatusName() : null)")
+    @Mapping(target = "startDate", expression = "java(promotion.getStartDate() != null ? promotion.getStartDate().atStartOfDay() : null)")
+    @Mapping(target = "endDate", expression = "java(promotion.getEndDate() != null ? promotion.getEndDate().atStartOfDay() : null)")
+    @Mapping(target = "product", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    PromotionDTO toDTO(Promotion promotion);
 
     /**
-     * Convierte una lista de entidades Promotion a lista de PromotionResponseDTO
-     */
-    java.util.List<PromotionResponseDTO> toResponseDTOList(java.util.List<Promotion> promotions);
-
-    /**
-     * Convierte PromotionInput a entidad Promotion (para crear)
-     * Ignora campos que se setean por separado (relaciones)
+     * Convierte PromotionDTO a entidad Promotion
      */
     @Mapping(target = "promotionId", ignore = true)
+    @Mapping(target = "discountValue", expression = "java(promotionDTO.getDiscountPercentage() != null ? promotionDTO.getDiscountPercentage().doubleValue() : null)")
+    @Mapping(target = "startDate", expression = "java(promotionDTO.getStartDate() != null ? promotionDTO.getStartDate().toLocalDate() : null)")
+    @Mapping(target = "endDate", expression = "java(promotionDTO.getEndDate() != null ? promotionDTO.getEndDate().toLocalDate() : null)")
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "user", ignore = true)
-    @Mapping(target = "category", ignore = true)
-    @Mapping(target = "startDate", source = "startDateAsLocalDate")
-    @Mapping(target = "endDate", source = "endDateAsLocalDate")
-    Promotion toEntity(PromotionInput promotionInput);
+    Promotion toEntity(PromotionDTO promotionDTO);
 
     /**
-     * Actualiza una entidad Promotion existente con datos de PromotionInput
-     * Útil para operaciones de UPDATE
+     * Convierte una lista de entidades Promotion a lista de PromotionDTO
+     */
+    java.util.List<PromotionDTO> toDTOList(java.util.List<Promotion> promotions);
+
+    /**
+     * Actualiza una entidad Promotion existente con datos de PromotionDTO
      */
     @Mapping(target = "promotionId", ignore = true)
+    @Mapping(target = "discountValue", expression = "java(promotionDTO.getDiscountPercentage() != null ? promotionDTO.getDiscountPercentage().doubleValue() : null)")
+    @Mapping(target = "startDate", expression = "java(promotionDTO.getStartDate() != null ? promotionDTO.getStartDate().toLocalDate() : null)")
+    @Mapping(target = "endDate", expression = "java(promotionDTO.getEndDate() != null ? promotionDTO.getEndDate().toLocalDate() : null)")
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "user", ignore = true)
-    @Mapping(target = "category", ignore = true)
-    @Mapping(target = "startDate", source = "startDateAsLocalDate")
-    @Mapping(target = "endDate", source = "endDateAsLocalDate")
-    void updateEntityFromInput(PromotionInput promotionInput, @MappingTarget Promotion promotion);
+    void updateEntityFromDTO(PromotionDTO promotionDTO, @MappingTarget Promotion promotion);
 }
