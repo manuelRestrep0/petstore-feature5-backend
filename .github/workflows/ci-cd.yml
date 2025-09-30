@@ -41,14 +41,13 @@ jobs:
           cache: 'maven'
           cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pom.xml'
 
+      - name: Run Maven build
+        run: mvn -B clean verify
+
       - name: Check code style with Checkstyle
         working-directory: ${{ env.WORKING_DIRECTORY }}
         run: mvn checkstyle:check
-        continue-on-error: true
-
-      - name: Run Maven Verify
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: mvn verify -DskipTests
+        continue-on-error: false
 
       - name: Upload Checkstyle Results
         if: always()
