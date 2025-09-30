@@ -1,6 +1,6 @@
 package com.petstore.backend.service;
 
-import com.petstore.backend.entity.Category;
+
 import com.petstore.backend.entity.Product;
 import com.petstore.backend.repository.CategoryRepository;
 import com.petstore.backend.repository.ProductRepository;

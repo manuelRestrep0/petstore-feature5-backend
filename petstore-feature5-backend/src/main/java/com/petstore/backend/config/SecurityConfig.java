@@ -1,6 +1,5 @@
 package com.petstore.backend.config;
 
-import com.petstore.backend.config.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -93,9 +92,9 @@ public class SecurityConfig {
                         
                     } else {
                         // 🔒 MODO PRODUCCIÓN: Más restrictivo
-                        authz.requestMatchers("/graphiql/**").denyAll(); // ❌ No GraphiQL en producción
-                        authz.requestMatchers("/h2-console/**").denyAll(); // ❌ No H2 en producción
-                        authz.requestMatchers("/test", "/graphql-test").denyAll(); // ❌ No test endpoints
+                        authz.requestMatchers("/graphiql/**").denyAll(); //  No GraphiQL en producción
+                        authz.requestMatchers("/h2-console/**").denyAll(); //  No H2 en producción
+                        authz.requestMatchers("/test", "/graphql-test").denyAll(); //  No test endpoints
                         
                         // GraphQL requiere autenticación en producción
                         authz.requestMatchers("/graphql", "/graphql/**").authenticated();
