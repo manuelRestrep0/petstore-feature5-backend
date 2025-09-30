@@ -4,13 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'petstore-feature5-backend/**'
-      - '.github/workflows/**'
 
   pull_request:
     branches: [main]
-    paths:
-      - 'petstore-feature5-backend/**'
 
 env:
   JAVA_VERSION: '21'
