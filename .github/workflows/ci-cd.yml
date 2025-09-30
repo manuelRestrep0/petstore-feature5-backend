@@ -14,7 +14,7 @@ on:
 
 env:
   JAVA_VERSION: '21'
-  WORKING_DIRECTORY: 'petstore-feature5-backend/petstore-feature5-backend'
+  WORKING_DIRECTORY: 'petstore-feature5-backend'
 
 jobs:
   avoid_redundancy:
