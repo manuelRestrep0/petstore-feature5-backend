@@ -42,6 +42,7 @@ jobs:
           cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pom.xml'
 
       - name: Run Maven build
+        working-directory: ${{ env.WORKING_DIRECTORY }}
         run: mvn -B clean verify
 
       - name: Check code style with Checkstyle
