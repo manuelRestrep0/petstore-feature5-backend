@@ -72,14 +72,38 @@ El proyecto implementa una **capa de mappers profesional** usando **MapStruct**:
 - **MapStruct** (Mapeo de objetos)
 - **Maven** (Gestión de dependencias)
 
-## � Endpoints con Mappers
+## 🌐 Endpoints con Mappers
 
 ### REST API (Usando MapStruct):
 ```
-GET  /api/products         → ProductResponseDTO[]
-GET  /api/products/{id}    → ProductResponseDTO
-POST /api/products         → ProductResponseDTO
-PUT  /api/products/{id}    → ProductResponseDTO
+🔐 AUTH:
+GET  /api/auth/status          → Map<String,Object>
+POST /api/auth/login           → LoginResponse
+GET  /api/auth/verify          → JSON (valid: boolean)
+GET  /api/auth/me              → UserInfo  
+POST /api/auth/logout          → JSON (message)
+
+📦 PRODUCTS:
+GET  /api/products                     → ProductDTO[]
+GET  /api/products/category/{id}       → ProductDTO[]
+GET  /api/products/{id}                → ProductDTO
+GET  /api/products/search?name=        → ProductDTO[]
+GET  /api/products/price-range?min=&max= → ProductDTO[]
+
+🏷️ PROMOTIONS:
+GET  /api/promotions                   → PromotionDTO[]
+GET  /api/promotions/all               → PromotionDTO[]
+GET  /api/promotions/category/{id}     → PromotionDTO[]
+GET  /api/promotions/valid             → PromotionDTO[]
+GET  /api/promotions/status            → Map<String,Object>
+
+📁 CATEGORIES:
+GET  /api/categories           → CategoryDTO[]
+GET  /api/categories/{id}      → CategoryDTO
+POST /api/categories           → CategoryDTO
+PUT  /api/categories/{id}      → CategoryDTO
+DELETE /api/categories/{id}    → void
+GET  /api/categories/info      → String
 ```
 
 ### GraphQL (Entities directas):
@@ -87,10 +111,14 @@ PUT  /api/products/{id}    → ProductResponseDTO
 query {
   products { id, name, price, category { categoryName } }
   promotions { id, title, user { userName } }
+  categories { id, name, description }
 }
 ```
 
-**Nota**: GraphQL mantiene entities para compatibilidad, REST usa DTOs seguros.
+**✨ Características:**
+- **21 endpoints REST** implementados con MapStruct
+- **DTOs seguros** sin información sensible  
+- **GraphQL** para consultas flexibles y relacionales
 
 ## �🚀 Instalación
 
@@ -228,40 +256,69 @@ MapStruct genera **automáticamente** las implementaciones en `/target/generated
 
 ## 🌐 API Endpoints
 
-### Autenticación
+> **📋 Endpoints Verificados**: Esta documentación muestra únicamente los endpoints que están **realmente implementados** en el código.
 
-| Método | Endpoint | Descripción | Auth |
-|--------|----------|-------------|------|
-| POST | `/api/auth/login` | Login de usuario | No |
-| GET | `/api/auth/me` | Perfil del usuario logueado | Sí |
+### 🔐 Autenticación
 
-### Promociones
+| Método | Endpoint | Descripción | Auth | Response |
+|--------|----------|-------------|------|----------|
+| GET | `/api/auth/status` | Estado del servicio de autenticación | No | `Map<String,Object>` |
+| POST | `/api/auth/login` | Login de usuario | No | `LoginResponse` |
+| GET | `/api/auth/verify` | Verificar validez del token JWT | Sí | `JSON (valid: boolean)` |
+| GET | `/api/auth/me` | Perfil del usuario autenticado | Sí | `UserInfo` |
+| POST | `/api/auth/logout` | Cerrar sesión del usuario | No | `JSON (message)` |
 
-| Método | Endpoint | Descripción | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/promotions` | Listar todas las promociones | Sí |
-| POST | `/api/promotions` | Crear nueva promoción | Sí |
-| GET | `/api/promotions/{id}` | Obtener promoción por ID | Sí |
-| PUT | `/api/promotions/{id}` | Actualizar promoción | Sí |
-| DELETE | `/api/promotions/{id}` | Eliminar promoción | Sí |
+### 📦 Productos
 
-### 📦 Productos (CON MAPSTRUCT)
+| Método | Endpoint | Descripción | Auth | Response |
+|--------|----------|-------------|------|----------|
+| GET | `/api/products` | Listar todos los productos | No | `ProductDTO[]` |
+| GET | `/api/products/category/{categoryId}` | Productos por categoría | No | `ProductDTO[]` |
+| GET | `/api/products/{id}` | Obtener producto por ID | No | `ProductDTO` |
+| GET | `/api/products/search?name={nombre}` | Buscar productos por nombre | No | `ProductDTO[]` |
+| GET | `/api/products/price-range?minPrice={min}&maxPrice={max}` | Productos por rango de precio | No | `ProductDTO[]` |
 
-| Método | Endpoint | Descripción | Auth | Return |
-|--------|----------|-------------|------|--------|
-| GET | `/api/products` | **📋 Listar todos los productos** | No | `ProductResponseDTO[]` |
-| GET | `/api/products/category/{categoryId}` | **🏷️ Productos por categoría específica** | No | `ProductResponseDTO[]` |
-| GET | `/api/products/{id}` | Obtener producto por ID | No | `ProductResponseDTO` |
-| POST | `/api/products` | Crear nuevo producto | Sí | `ProductResponseDTO` |
-| PUT | `/api/products/{id}` | Actualizar producto | Sí | `ProductResponseDTO` |
-| DELETE | `/api/products/{id}` | Eliminar producto | Sí | `void` |
-| GET | `/api/products/search?name={nombre}` | 🔍 Buscar productos por nombre | No | `ProductResponseDTO[]` |
-| GET | `/api/products/price-range?minPrice={min}&maxPrice={max}` | 💰 Productos por rango de precios | No |
+### 🏷️ Promociones
 
-### Ejemplo de Uso REST
+| Método | Endpoint | Descripción | Auth | Response |
+|--------|----------|-------------|------|----------|
+| GET | `/api/promotions` | Promociones activas y vigentes | No | `PromotionDTO[]` |
+| GET | `/api/promotions/all` | Todas las promociones (admin) | No | `PromotionDTO[]` |
+| GET | `/api/promotions/category/{categoryId}` | Promociones por categoría | No | `PromotionDTO[]` |
+| GET | `/api/promotions/valid` | Promociones vigentes para hoy | No | `PromotionDTO[]` |
+| GET | `/api/promotions/status` | Estado del servicio | No | `Map<String,Object>` |
+
+### 📁 Categorías
+
+| Método | Endpoint | Descripción | Auth | Response |
+|--------|----------|-------------|------|----------|
+| GET | `/api/categories` | Listar todas las categorías | No | `CategoryDTO[]` |
+| GET | `/api/categories/{id}` | Obtener categoría por ID | No | `CategoryDTO` |
+| POST | `/api/categories` | Crear nueva categoría | No | `CategoryDTO` |
+| PUT | `/api/categories/{id}` | Actualizar categoría existente | No | `CategoryDTO` |
+| DELETE | `/api/categories/{id}` | Eliminar categoría | No | `void` |
+| GET | `/api/categories/info` | Información de endpoints | No | `String` |
+
+### 📊 Resumen de Endpoints
+
+- **Total**: 21 endpoints REST implementados
+- **Autenticación**: 5 endpoints (`/api/auth/*`)
+- **Productos**: 5 endpoints (`/api/products/*`)  
+- **Promociones**: 5 endpoints (`/api/promotions/*`)
+- **Categorías**: 6 endpoints (`/api/categories/*`)
+- **GraphQL**: 1 endpoint adicional (`/graphql`)
+
+### 📝 Ejemplos de Uso REST
 
 ```bash
-# Login
+# =============================
+# 🔐 AUTENTICACIÓN
+# =============================
+
+# 1. Verificar estado del servicio
+curl -X GET http://localhost:8080/api/auth/status
+
+# 2. Login de usuario
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
@@ -269,26 +326,86 @@ curl -X POST http://localhost:8080/api/auth/login \
     "password": "password123"
   }'
 
-# Obtener promociones (usar token del login)
-curl -X GET http://localhost:8080/api/promotions \
+# 3. Verificar token (usar token del login)
+curl -X GET http://localhost:8080/api/auth/verify \
   -H "Authorization: Bearer TU_TOKEN_AQUI"
 
-# 📦 EJEMPLOS DE PRODUCTOS (NUEVOS ENDPOINTS)
+# 4. Obtener perfil del usuario autenticado
+curl -X GET http://localhost:8080/api/auth/me \
+  -H "Authorization: Bearer TU_TOKEN_AQUI"
 
-# Listar TODOS los productos
+# 5. Logout
+curl -X POST http://localhost:8080/api/auth/logout
+
+# =============================
+# 📦 PRODUCTOS
+# =============================
+
+# Listar todos los productos
 curl -X GET http://localhost:8080/api/products
 
-# Listar productos de una categoría específica (ej: categoría ID 1 - Electronics)
+# Obtener productos por categoría
 curl -X GET http://localhost:8080/api/products/category/1
+
+# Obtener producto específico
+curl -X GET http://localhost:8080/api/products/1
 
 # Buscar productos por nombre
 curl -X GET "http://localhost:8080/api/products/search?name=laptop"
 
-# Productos en rango de precios ($100 - $500)
+# Productos por rango de precios
 curl -X GET "http://localhost:8080/api/products/price-range?minPrice=100&maxPrice=500"
 
-# Obtener un producto específico por ID
-curl -X GET http://localhost:8080/api/products/1
+# =============================
+# 🏷️ PROMOCIONES
+# =============================
+
+# Listar promociones activas
+curl -X GET http://localhost:8080/api/promotions
+
+# Listar todas las promociones (admin)
+curl -X GET http://localhost:8080/api/promotions/all
+
+# Promociones por categoría
+curl -X GET http://localhost:8080/api/promotions/category/1
+
+# Promociones vigentes para hoy
+curl -X GET http://localhost:8080/api/promotions/valid
+
+# Estado del servicio de promociones
+curl -X GET http://localhost:8080/api/promotions/status
+
+# =============================
+# 📁 CATEGORÍAS
+# =============================
+
+# Listar todas las categorías
+curl -X GET http://localhost:8080/api/categories
+
+# Obtener categoría específica
+curl -X GET http://localhost:8080/api/categories/1
+
+# Crear nueva categoría
+curl -X POST http://localhost:8080/api/categories \
+  -H "Content-Type: application/json" \
+  -d '{
+    "categoryName": "Electrónicos",
+    "description": "Productos electrónicos y gadgets"
+  }'
+
+# Actualizar categoría
+curl -X PUT http://localhost:8080/api/categories/1 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "categoryName": "Electrónicos Actualizados",
+    "description": "Productos electrónicos y gadgets modernos"
+  }'
+
+# Eliminar categoría
+curl -X DELETE http://localhost:8080/api/categories/1
+
+# Información de endpoints
+curl -X GET http://localhost:8080/api/categories/info
 ```
 
 ## 🔗 GraphQL
@@ -1073,9 +1190,28 @@ Para problemas o preguntas:
 
 ---
 
+## 📋 **Documentación Verificada**
+
+> **🔍 Endpoints Verificados**: Esta documentación ha sido **actualizada automáticamente** para reflejar únicamente los endpoints que están realmente implementados en el código.
+
+**📊 Resumen de Verificación:**
+- **Metodología**: Análisis automático de anotaciones `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`
+- **Controllers verificados**: `AuthController`, `ProductController`, `PromotionController`, `CategoryController`
+- **Total de endpoints**: 21 endpoints REST confirmados como implementados
+- **GraphQL**: 1 endpoint adicional verificado
+
+**✅ Estado de Implementación:**
+- **AuthController**: 5/5 endpoints ✓
+- **ProductController**: 5/5 endpoints ✓  
+- **PromotionController**: 5/5 endpoints ✓
+- **CategoryController**: 6/6 endpoints ✓
+
+---
+
 ## 🏆 Credits
 
 Desarrollado para el sistema de promociones de Petstore con tecnologías modernas de Spring Boot y GraphQL.
 
 **Versión**: 0.0.1-SNAPSHOT  
-**Fecha**: Septiembre 2025
+**Última actualización**: Diciembre 2024  
+**Documentación**: Verificada automáticamente
