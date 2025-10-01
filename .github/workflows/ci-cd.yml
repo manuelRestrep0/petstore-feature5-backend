@@ -59,6 +59,7 @@ jobs:
         continue-on-error: true
 
   build:
+    needs: [lint]
     name: Build Docker Image
     runs-on: ubuntu-22.04
     steps:
@@ -70,6 +71,7 @@ jobs:
         run: docker build -t petstore-backend:latest .
 
   test:
+    name: Unit and Integration Tests
     needs: [ lint, build ]
     runs-on: ubuntu-22.04
     steps:
@@ -106,14 +108,14 @@ jobs:
       - name: Run Tests
         run: echo "There's no tests to run yet"
 
-#  deploy:
-#    name: Deploy to Render
-#    needs: [lint, test, e2e]
-#    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-#    runs-on: ubuntu-22.04
-#    steps:
-#      - name: Checkout Repository
-#        uses: actions/checkout@v4
-#
-#      - name: Trigger Render Deploy Hook
-#        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+  deploy:
+    name: Deploy to Render
+    needs: [lint, test, e2e]
+    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Trigger Render Deploy Hook
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
