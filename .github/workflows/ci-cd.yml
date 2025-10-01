@@ -57,3 +57,63 @@ jobs:
           name: checkstyle-results
           path: ${{ env.WORKING_DIRECTORY }}/target/checkstyle-result.xml
         continue-on-error: true
+
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build and Push Docker Image
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: docker build -t petstore-backend:latest .
+
+  test:
+    needs: [ lint, build ]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'maven'
+          cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pom.xml'
+
+      - name: Execute Maven Tests
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: mvn -B test
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ${{ env.WORKING_DIRECTORY }}/target/surefire-reports
+
+  e2e:
+    needs: [lint, build]
+    name: End-to-End Tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Tests
+        run: echo "There's no tests to run yet"
+
+#  deploy:
+#    name: Deploy to Render
+#    needs: [lint, test, e2e]
+#    if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+#    runs-on: ubuntu-22.04
+#    steps:
+#      - name: Checkout Repository
+#        uses: actions/checkout@v4
+#
+#      - name: Trigger Render Deploy Hook
+#        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
