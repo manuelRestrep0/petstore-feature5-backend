@@ -1406,5 +1406,7 @@ Para problemas o preguntas:
 Desarrollado para el sistema de promociones de Petstore con tecnologías modernas de Spring Boot y GraphQL.
 
 **Versión**: 0.0.1-SNAPSHOT  
+
 **Última actualización**: octubre 2025 
+
 
