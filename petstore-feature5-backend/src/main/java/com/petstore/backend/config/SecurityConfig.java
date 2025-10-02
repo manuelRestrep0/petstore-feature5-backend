@@ -70,16 +70,26 @@ public class SecurityConfig {
                     authz.requestMatchers("/api/auth/login", "/api/auth/register").permitAll();
                     authz.requestMatchers("/actuator/health").permitAll();
                     
-                    // Verificar si estamos en modo desarrollo
+                    // Verificar si estamos en modo desarrollo o producción
                     String[] activeProfiles = environment.getActiveProfiles();
-                    boolean isProduction = activeProfiles.length > 0 && 
-                                         java.util.Arrays.asList(activeProfiles).contains("prod");
-                    boolean isDevelopment = !isProduction;
+                    boolean isProduction = java.util.Arrays.asList(activeProfiles).contains("prod") ||
+                                         java.util.Arrays.asList(activeProfiles).contains("production");
+                    boolean isDevelopment = java.util.Arrays.asList(activeProfiles).contains("dev") ||
+                                          java.util.Arrays.asList(activeProfiles).contains("development") ||
+                                          activeProfiles.length == 0; // Por defecto desarrollo
+                    
+                    // Log del modo detectado
+                    System.out.println("🔍 Security Mode Detection:");
+                    System.out.println("   Active Profiles: " + java.util.Arrays.toString(activeProfiles));
+                    System.out.println("   Is Production: " + isProduction);
+                    System.out.println("   Is Development: " + isDevelopment);
+                    
+                    // GraphiQL y GraphQL SIEMPRE PÚBLICOS (tanto dev como prod)
+                    authz.requestMatchers("/graphiql", "/graphiql/**").permitAll();
+                    authz.requestMatchers("/graphql", "/graphql/**").permitAll();
                     
                     if (isDevelopment) {
                         // 🔓 MODO DESARROLLO: Más permisivo
-                        authz.requestMatchers("/graphiql", "/graphiql/**").permitAll(); // GraphiQL para dev
-                        authz.requestMatchers("/graphql", "/graphql/**").permitAll(); // GraphQL público en dev
                         authz.requestMatchers("/h2-console/**").permitAll(); // H2 Console para dev
                         authz.requestMatchers("/actuator/**").permitAll(); // Actuator para dev
                         authz.requestMatchers("/test", "/graphql-test").permitAll(); // Test endpoints
@@ -92,12 +102,8 @@ public class SecurityConfig {
                         
                     } else {
                         // 🔒 MODO PRODUCCIÓN: Más restrictivo
-                        authz.requestMatchers("/graphiql/**").denyAll(); //  No GraphiQL en producción
-                        authz.requestMatchers("/h2-console/**").denyAll(); //  No H2 en producción
-                        authz.requestMatchers("/test", "/graphql-test").denyAll(); //  No test endpoints
-                        
-                        // GraphQL requiere autenticación en producción
-                        authz.requestMatchers("/graphql", "/graphql/**").authenticated();
+                        authz.requestMatchers("/h2-console/**").denyAll(); // ❌ No H2 en producción
+                        authz.requestMatchers("/test", "/graphql-test").denyAll(); // ❌ No test endpoints
                         
                         // Solo actuator health público en producción
                         authz.requestMatchers("/actuator/**").authenticated();
@@ -107,11 +113,16 @@ public class SecurityConfig {
                         authz.requestMatchers("/api/products/**").authenticated();
                     }
                     
-                    // Promociones siempre requieren autenticación
-                    authz.requestMatchers("/api/promotions/**").authenticated();
+                    // Promociones siempre requieren autenticación (excepto algunas lecturas públicas)
+                    authz.requestMatchers("GET", "/api/promotions", "/api/promotions/status").permitAll(); // Lectura pública
+                    authz.requestMatchers("/api/promotions/**").authenticated(); // El resto requiere auth
+                    
+                    // Categorías: permitir lectura, auth para modificaciones
+                    authz.requestMatchers("GET", "/api/categories", "/api/categories/*", "/api/categories/info").permitAll();
+                    authz.requestMatchers("/api/categories/**").authenticated();
                     
                     // Perfil de usuario siempre requiere autenticación
-                    authz.requestMatchers("/api/auth/me").authenticated();
+                    authz.requestMatchers("/api/auth/me", "/api/auth/verify").authenticated();
                     
                     // Whitelist adicional si está configurada
                     if (whitelistEndpoints != null && whitelistEndpoints.length > 0) {

@@ -16,7 +16,6 @@ import com.petstore.backend.dto.PromotionDTO;
 import com.petstore.backend.entity.Category;
 import com.petstore.backend.entity.Product;
 import com.petstore.backend.entity.Promotion;
-import com.petstore.backend.entity.Role;
 import com.petstore.backend.entity.User;
 import com.petstore.backend.repository.CategoryRepository;
 import com.petstore.backend.repository.ProductRepository;
@@ -29,6 +28,7 @@ import com.petstore.backend.service.PromotionService;
 public class GraphQLResolver {
 
     private final PromotionService promotionService;
+    private final AuthService authService;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
@@ -42,10 +42,33 @@ public class GraphQLResolver {
             ProductRepository productRepository,
             PromotionRepository promotionRepository) {
         this.promotionService = promotionService;
+        this.authService = authService;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
         this.promotionRepository = promotionRepository;
+    }
+
+    // === HELPER METHODS ===
+    
+    /**
+     * Verificar si el usuario está autenticado
+     * Lanza excepción si no está autenticado
+     */
+    private void requireAuthentication() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
+            throw new RuntimeException("Authentication required. Please provide a valid JWT token.");
+        }
+    }
+    
+    /**
+     * Obtener usuario autenticado actual
+     */
+    private User getAuthenticatedUser() {
+        requireAuthentication();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return userRepository.findByEmail(auth.getName()).orElse(null);
     }
 
     // === QUERIES ===
@@ -57,15 +80,15 @@ public class GraphQLResolver {
 
     @QueryMapping
     public User currentUser() {
+        // Solo requerir autenticación para currentUser
+        requireAuthentication();
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
-            return null;
-        }
         return userRepository.findByEmail(auth.getName()).orElse(null);
     }
 
     @QueryMapping
     public List<Promotion> promotions() {
+        // Público - sin autenticación
         try {
             return promotionRepository.findAll();
         } catch (Exception e) {
@@ -76,6 +99,7 @@ public class GraphQLResolver {
 
     @QueryMapping
     public List<Promotion> promotionsActive() {
+        // Público - sin autenticación
         try {
             return promotionService.getAllActivePromotionsEntities();
         } catch (Exception e) {
@@ -86,6 +110,7 @@ public class GraphQLResolver {
 
     @QueryMapping
     public List<Promotion> promotionsByCategory(@Argument Integer categoryId) {
+        // Público - sin autenticación
         try {
             return promotionService.getPromotionsByCategoryEntities(categoryId);
         } catch (Exception e) {
@@ -96,6 +121,7 @@ public class GraphQLResolver {
 
     @QueryMapping
     public Promotion promotion(@Argument Integer id) {
+        // Público - sin autenticación
         try {
             return promotionRepository.findById(id).orElse(null);
         } catch (Exception e) {
@@ -106,6 +132,7 @@ public class GraphQLResolver {
 
     @QueryMapping
     public List<Category> categories() {
+        // Público - sin autenticación
         try {
             return categoryRepository.findAll();
         } catch (Exception e) {
@@ -116,6 +143,7 @@ public class GraphQLResolver {
 
     @QueryMapping
     public Category category(@Argument Integer id) {
+        // Público - sin autenticación
         try {
             return categoryRepository.findById(id).orElse(null);
         } catch (Exception e) {
@@ -126,6 +154,7 @@ public class GraphQLResolver {
 
     @QueryMapping
     public List<Product> products() {
+        // Público - sin autenticación
         try {
             return productRepository.findAll();
         } catch (Exception e) {
@@ -136,6 +165,7 @@ public class GraphQLResolver {
 
     @QueryMapping
     public List<Product> productsByCategory(@Argument Integer categoryId) {
+        // Público - sin autenticación
         try {
             return productRepository.findByCategoryCategoryId(categoryId);
         } catch (Exception e) {
@@ -146,6 +176,7 @@ public class GraphQLResolver {
 
     @QueryMapping
     public Product product(@Argument Integer id) {
+        // Público - sin autenticación
         try {
             return productRepository.findById(id).orElse(null);
         } catch (Exception e) {
@@ -161,82 +192,16 @@ public class GraphQLResolver {
         try {
             System.out.println("GraphQL Login attempt for email: " + email);
             
-            // Intentar primero con BD real
-            try {
-                User user = userRepository.findByEmail(email).orElse(null);
-                if (user != null) {
-                    System.out.println("REAL DB: User found: " + user.getEmail() + ", Role: " + 
-                        (user.getRole() != null ? user.getRole().getRoleName() : "NULL"));
-                    System.out.println("REAL DB: User password from DB: " + user.getPassword());
-                    System.out.println("REAL DB: Password provided by user: " + password);
-
-                    // Verificar contraseña - comparar con la contraseña almacenada en la BD
-                    // Por ahora las contraseñas están en texto plano para pruebas
-                    if (!user.getPassword().equals(password)) {
-                        System.out.println("REAL DB: Authentication failed for user: " + email + " - incorrect password");
-                        LoginResponse response = new LoginResponse();
-                        response.setSuccess(false);
-                        response.setMessage("Invalid credentials");
-                        return response;
-                    }
-
-                    String token = "jwt-real-" + System.currentTimeMillis();
-                    System.out.println("REAL DB: Login successful, token: " + token);
-                    
-                    LoginResponse response = new LoginResponse();
-                    response.setToken(token);
-                    response.setUserName(user.getUserName());
-                    response.setEmail(user.getEmail());
-                    response.setRole(user.getRole() != null ? user.getRole().getRoleName() : "USER");
-                    response.setSuccess(true);
-                    response.setMessage("Login successful");
-                    return response;
-                }
-            } catch (Exception dbError) {
-                System.out.println("BD CONNECTION ERROR: " + dbError.getMessage());
-                System.out.println("FALLBACK: Using mock data due to DB connection issues");
-                
-                // FALLBACK: Mock data cuando BD no está disponible
-                if ("admin@marketing.com".equals(email) && "admin123".equals(password)) {
-                    
-                    // Crear usuario mock
-                    User mockUser = new User();
-                    mockUser.setUserId(1);
-                    mockUser.setUserName("Marketing Admin (Mock)");
-                    mockUser.setEmail("admin@marketing.com");
-                    
-                    // Crear rol mock
-                    Role mockRole = new Role();
-                    mockRole.setRoleId(1);
-                    mockRole.setRoleName("Marketing Admin");
-                    mockUser.setRole(mockRole);
-                    
-                    String token = "jwt-mock-fallback-" + System.currentTimeMillis();
-                    System.out.println("MOCK FALLBACK: Login successful, token: " + token);
-                    
-                    LoginResponse response = new LoginResponse();
-                    response.setToken(token);
-                    response.setUserName(mockUser.getUserName());
-                    response.setEmail(mockUser.getEmail());
-                    response.setRole(mockRole.getRoleName());
-                    response.setSuccess(true);
-                    response.setMessage("Login successful (Mock)");
-                    return response;
-                }
-            }
-            
-            System.out.println("Login failed - invalid credentials or user not found");
-            LoginResponse response = new LoginResponse();
-            response.setSuccess(false);
-            response.setMessage("Invalid credentials or user not found");
+            // Usar AuthService para generar JWT real (igual que REST)
+            LoginResponse response = authService.authenticateMarketingAdmin(email, password);
+            System.out.println("GraphQL Login successful, using real JWT token");
             return response;
             
         } catch (Exception e) {
             System.err.println("Error in GraphQL login: " + e.getMessage());
-            e.printStackTrace();
             LoginResponse response = new LoginResponse();
             response.setSuccess(false);
-            response.setMessage("Login error: " + e.getMessage());
+            response.setMessage("Invalid credentials or authentication error");
             return response;
         }
     }
@@ -245,6 +210,7 @@ public class GraphQLResolver {
 
     @MutationMapping
     public Promotion createPromotion(@Argument PromotionDTO input) {
+        requireAuthentication();
         try {
             System.out.println("Creating promotion with input: " + input);
             
@@ -268,6 +234,7 @@ public class GraphQLResolver {
 
     @MutationMapping
     public Promotion updatePromotion(@Argument Integer id, @Argument PromotionDTO input) {
+        requireAuthentication();
         try {
             System.out.println("Updating promotion " + id + " with input: " + input);
             
@@ -296,6 +263,7 @@ public class GraphQLResolver {
 
     @MutationMapping
     public Boolean deletePromotion(@Argument Integer id) {
+        requireAuthentication();
         try {
             System.out.println("Deleting promotion with id: " + id);
             
