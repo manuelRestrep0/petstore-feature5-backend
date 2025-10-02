@@ -33,7 +33,7 @@ build/
 .vscode/
 
 ### variables ###
-.env 
+.env
 .env.example
 
 # carpea target
