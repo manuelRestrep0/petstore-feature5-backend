@@ -17,13 +17,35 @@ Sistema completo de promociones para petstore con autenticación JWT, API REST y
 - [Estructura del Proyecto](#-estructura-del-proyecto)
 - [Troubleshooting](#-troubleshooting)
 
-## 🎯 Descripción
+## � **Novedades Recientes**
+
+### ✅ **GraphQL con JWT Real** 
+- **Antes**: GraphQL generaba tokens falsos (`fake-jwt-token`)
+- **Ahora**: GraphQL usa `AuthService` y genera **JWT reales** idénticos a REST
+
+### ✅ **GraphiQL Público en Producción**
+- **Antes**: GraphiQL restringido en producción  
+- **Ahora**: GraphiQL **público en desarrollo Y producción** para facilitar pruebas
+
+### ✅ **Base de Datos Optimizada para Producción**
+- **HikariCP**: Pool de conexiones optimizado para Neon Database
+- **JPA**: Configuraciones de batch y transacciones mejoradas
+- **Estabilidad**: Sin errores de conexión JDBC en producción
+
+### ✅ **Seguridad Mejorada**
+- **Consultas Públicas**: Categorías, productos, promociones sin JWT
+- **Consultas Protegidas**: `currentUser` y mutations requieren JWT real
+- **Whitelist Actualizada**: Endpoints públicos configurados correctamente
+
+---
+
+## �🎯 Descripción
 
 Sistema backend para gestión de promociones en petstore que incluye:
-- Autenticación JWT con Spring Security
-- API REST y GraphQL
+- Autenticación JWT con Spring Security (**JWT reales en GraphQL**)
+- API REST y GraphQL (**GraphiQL público en ambos ambientes**)
 - Gestión de promociones, categorías, productos y usuarios
-- Integración con Neon Database (PostgreSQL)
+- Integración con Neon Database (PostgreSQL) (**optimizada para producción**)
 - Sistema de roles y permisos
 
 ## ✨ Características
@@ -179,42 +201,126 @@ SERVER_PORT=8080
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:8081
 ```
 
-### 2. Configurar Neon Database
+### 2. 🚀 **Perfiles de Configuración**
+
+#### **Desarrollo** (`application-dev.properties`)
+```properties
+# GraphQL - Completamente público
+spring.graphql.graphiql.enabled=true
+app.security.whitelist=/api/auth/login,/graphiql,/graphql,/actuator/health
+
+# Base de datos local con logs SQL
+spring.jpa.show-sql=true
+logging.level.com.petstore.backend=DEBUG
+```
+
+#### **Producción** (`application-prod.properties`)  
+```properties
+# GraphQL - Público pero optimizado
+spring.graphql.graphiql.enabled=true
+app.security.whitelist=/api/auth/login,/graphiql,/graphql,/actuator/health
+
+# Base de datos optimizada (HikariCP)
+spring.datasource.hikari.minimum-idle=2
+spring.datasource.hikari.maximum-pool-size=10
+spring.datasource.hikari.connection-timeout=20000
+
+# JPA optimizado para producción
+spring.jpa.properties.hibernate.jdbc.batch_size=25
+spring.jpa.properties.hibernate.order_inserts=true
+spring.jpa.properties.hibernate.order_updates=true
+spring.jpa.properties.hibernate.jdbc.batch_versioned_data=true
+```
+
+### 3. Configurar Neon Database
 
 1. Crear cuenta en [Neon](https://neon.tech/)
 2. Crear nuevo proyecto
 3. Copiar connection string
 4. Actualizar variables en `.env`
 
+### 4. 🔧 **Usuarios de Prueba Configurados**
+
+| Email | Password | Role | Descripción |
+|-------|----------|------|-------------|
+| `alice@example.com` | `password123` | Marketing Admin | ✅ Usuario para pruebas GraphQL |
+| `admin@petstore.com` | `password123` | Marketing Admin | Usuario principal |
+
+**Ejemplo de uso**:
+```bash
+# REST Login
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "alice@example.com", "password": "password123"}'
+
+# GraphQL Login
+curl -X POST http://localhost:8080/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query": "mutation { login(email: \"alice@example.com\", password: \"password123\") { success token } }"}'
+```
+
 ## ▶️ Ejecución
 
 ### 1. Ejecutar la Aplicación
 
 ```bash
-# Ejecutar con perfil por defecto
+# Ejecutar con perfil por defecto (desarrollo)
 mvn spring-boot:run
 
-# O con perfil específico
-mvn spring-boot:run -Dspring.profiles.active=default
+# Ejecutar en modo desarrollo
+mvn spring-boot:run -Dspring.profiles.active=dev
+
+# Ejecutar en modo producción
+mvn spring-boot:run -Dspring.profiles.active=prod
 ```
 
-### 2. Verificar que está Funcionando
+### 2. 🎯 **Verificar que está Funcionando**
 
 La aplicación estará disponible en: `http://localhost:8080`
 
 **Endpoints de verificación:**
 - Health Check: `http://localhost:8080/actuator/health`
-- GraphiQL: `http://localhost:8080/graphiql`
+- **GraphiQL** (público): `http://localhost:8080/graphiql` ✅
+- **GraphQL API**: `http://localhost:8080/graphql`
 
-### 3. Construir JAR para Producción
+**✅ Prueba rápida de GraphQL**:
+```bash
+# Consulta pública (sin JWT)
+curl -X POST http://localhost:8080/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query": "{ categories { categoryId categoryName } }"}'
+
+# Login para obtener JWT real
+curl -X POST http://localhost:8080/graphql \
+  -H "Content-Type: application/json" \
+  -d '{"query": "mutation { login(email: \"alice@example.com\", password: \"password123\") { success token } }"}'
+```
+
+### 3. 🏭 **Construir JAR para Producción**
 
 ```bash
-# Construir JAR
-mvn clean package
+# Construir JAR optimizado
+mvn clean package -DskipTests
 
-# Ejecutar JAR
-java -jar target/petstore-feature5-backend-0.0.1-SNAPSHOT.jar
+# Ejecutar en producción con variables de entorno
+SPRING_PROFILES_ACTIVE=prod java -jar target/petstore-feature5-backend-0.0.1-SNAPSHOT.jar
+
+# O en Windows PowerShell
+$env:SPRING_PROFILES_ACTIVE="prod"; java -jar target/petstore-feature5-backend-0.0.1-SNAPSHOT.jar
 ```
+
+### 4. 📊 **Estado de la Aplicación por Perfil**
+
+#### **Desarrollo** (`dev` profile):
+- 🌐 GraphiQL: **Público** en `http://localhost:8080/graphiql`
+- 🔍 SQL Logs: **Habilitados** para debugging
+- 🐛 Debug Logs: **Habilitados** para desarrollo
+
+#### **Producción** (`prod` profile):
+- 🌐 GraphiQL: **Público** (optimizado para pruebas)
+- ⚡ HikariCP: **Optimizado** para Neon Database
+- 🚀 JPA: **Configurado** para alto rendimiento
+- 📝 Logs: **Solo errores** y información esencial
 
 ## 🛠️ Uso de MapStruct
 
@@ -413,7 +519,49 @@ curl -X GET http://localhost:8080/api/categories/info
 ### Endpoint GraphQL
 
 - **URL**: `http://localhost:8080/graphql`
-- **GraphiQL**: `http://localhost:8080/graphiql`
+- **GraphiQL**: `http://localhost:8080/graphiql` (público en desarrollo Y producción)
+
+### 🔐 **Autenticación JWT Real**
+
+**✅ NOVEDAD**: GraphQL ahora genera **JWT tokens reales** usando el mismo `AuthService` que REST:
+
+```graphql
+mutation {
+  login(email: "alice@example.com", password: "password123") {
+    success
+    token      # ← JWT real generado por AuthService
+    user {
+      userId
+      userName
+      email
+      role { roleName }
+    }
+  }
+}
+```
+
+### 🌍 **Acceso Público a GraphiQL**
+
+**✅ CONFIGURACIÓN ACTUALIZADA**: GraphiQL es ahora **público en ambos ambientes**:
+
+- **Desarrollo**: `http://localhost:8080/graphiql` ✅ Público
+- **Producción**: `http://localhost:8080/graphiql` ✅ Público  
+
+Esto permite pruebas fáciles sin configuración adicional.
+
+### 🛡️ **Política de Seguridad GraphQL**
+
+| Query/Mutation | Autenticación | Descripción |
+|----------------|---------------|-------------|
+| `health` | ❌ Público | Health check |
+| `categories` | ❌ Público | Consultar categorías |
+| `products` | ❌ Público | Consultar productos |
+| `promotions` | ❌ Público | Consultar promociones |
+| `currentUser` | ✅ JWT Requerido | Info del usuario autenticado |
+| `login` | ❌ Público | Generar JWT token |
+| `createPromotion` | ✅ JWT Requerido | Crear promoción |
+| `updatePromotion` | ✅ JWT Requerido | Actualizar promoción |
+| `deletePromotion` | ✅ JWT Requerido | Eliminar promoción |
 
 ### 🌟 **Capacidades Avanzadas de GraphQL**
 
@@ -774,12 +922,14 @@ query AnalisisPrecios {
 
 ### Mutations Disponibles
 
+#### 🔐 **Login con JWT Real**
+
 ```graphql
-mutation {
-  # Login (no requiere autenticación previa)
-  login(email: "admin@petstore.com", password: "password123") {
-    success
-    token
+mutation LoginReal {
+  # ✅ ACTUALIZADO: Ahora genera JWT reales usando AuthService
+  login(email: "alice@example.com", password: "password123") {
+    success   # true si autenticación exitosa
+    token     # JWT real (no fake) - eyJhbGciOiJIUzI1NiJ9...
     user {
       userId
       userName
@@ -790,6 +940,7 @@ mutation {
       }
     }
   }
+}
   
   # Crear promoción (requiere autenticación)
   createPromotion(input: {
@@ -930,14 +1081,28 @@ query ReportePromocionesActivas {
 }
 ```
 
-### Ejemplo con Headers de Autenticación
+### 🔑 **Ejemplo con Headers de Autenticación**
 
-Para queries que requieren autenticación, agregar header:
+Para queries que requieren autenticación, usar JWT real obtenido del login:
 
 ```json
 {
-  "Authorization": "Bearer TU_TOKEN_JWT_AQUI"
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbGljZUBleGFtcGxlLmNvbSIsImlhdCI6MTc1OTM3NDIyNSwiZXhwIjoxNzU5NDYwNjI1fQ.GUb6B9oaZgBAo-TEe2yM7zpv4pimgt5C5763-5ph0Kg"
 }
+```
+
+**Proceso completo**:
+1. Hacer `login` mutation para obtener token JWT real
+2. Usar el token en header `Authorization: Bearer <token>`
+3. Acceder a queries protegidas como `currentUser`
+
+**Ejemplo con PowerShell**:
+```powershell
+# 1. Login para obtener JWT
+$loginResponse = Invoke-WebRequest -Uri "http://localhost:8080/graphql" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"query":"mutation { login(email: \"alice@example.com\", password: \"password123\") { success token } }"}'
+
+# 2. Usar JWT en consulta protegida  
+Invoke-WebRequest -Uri "http://localhost:8080/graphql" -Method POST -Headers @{"Content-Type"="application/json"; "Authorization"="Bearer <TOKEN_AQUI>"} -Body '{"query":"{ currentUser { userId userName email } }"}'
 ```
 
 ## 🗄️ Base de Datos
@@ -1106,18 +1271,33 @@ petstore-feature5-backend/
 
 ## 🚨 Troubleshooting
 
+### ✅ **Problemas Resueltos Recientemente**
+
+#### **GraphQL Token Falso → JWT Real**
+- **Problema**: GraphQL devolvía `fake-jwt-token` 
+- **✅ Solución**: Ahora usa `AuthService.authenticateMarketingAdmin()` para JWT reales
+
+#### **GraphiQL Restringido en Producción**
+- **Problema**: GraphiQL inaccesible en modo producción
+- **✅ Solución**: Configurado como público en `SecurityConfig` para ambos ambientes
+
+#### **Errores de Conexión JDBC en Producción**
+- **Problema**: `Connection timeout`, `Pool exhausted` en Neon Database
+- **✅ Solución**: HikariCP optimizado con `minimum-idle=2`, `maximum-pool-size=10`
+
 ### Problemas Comunes
 
 #### 1. Error de Conexión a Base de Datos
 
 ```
-Error: Connection refused
+Error: Connection refused / Connection timeout
 ```
 
 **Solución**:
 - Verificar variables en `.env`
 - Comprobar que Neon DB está activo
 - Validar connection string
+- **NUEVO**: Verificar configuración HikariCP en `application-prod.properties`
 
 #### 2. Token JWT Inválido
 
@@ -1127,8 +1307,9 @@ Error: 401 Unauthorized
 
 **Solución**:
 - Verificar que JWT_SECRET esté configurado
-- Comprobar formato del token en headers
+- Comprobar formato del token en headers: `Authorization: Bearer <token>`
 - Validar que el token no haya expirado
+- **NUEVO**: Asegurar usar JWT real de GraphQL login, no tokens falsos
 
 #### 3. CORS Errors
 
@@ -1143,12 +1324,24 @@ Error: CORS policy blocks request
 #### 4. GraphQL Schema Error
 
 ```
-Error: Schema validation failed
+Error: Schema validation failed / Field undefined
 ```
 
 **Solución**:
 - Verificar `schema.graphqls` en resources/graphql
 - Comprobar que los resolvers estén implementados
+- **NUEVO**: Usar nombres correctos: `categoryId` (no `id`), `userName` (no `username`)
+
+#### 5. **NUEVO**: GraphiQL No Accesible
+
+```
+Error: 403 Forbidden en /graphiql
+```
+
+**Solución**:
+- Verificar que `app.security.whitelist` incluya `/graphiql`
+- Comprobar configuración en `SecurityConfig.java`
+- GraphiQL debe ser público en ambos perfiles (dev/prod)
 
 ### Logs Útiles
 
