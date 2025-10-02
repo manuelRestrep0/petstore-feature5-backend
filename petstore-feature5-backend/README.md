@@ -198,7 +198,7 @@ SERVER_PORT=8080
 # =========================
 # CORS CONFIG
 # =========================
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:8081
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://localhost:8081,https://petstore-feature5-backend.onrender.com
 ```
 
 ### 2. 🚀 **Perfiles de Configuración**
