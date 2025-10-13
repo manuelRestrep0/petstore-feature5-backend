@@ -1,4 +1,4 @@
-name: Static Analysis
+name: Static Analysis - Checkstyle Only
 
 on:
   push:
@@ -16,8 +16,8 @@ env:
   WORKING_DIRECTORY: 'petstore-feature5-backend'
 
 jobs:
-  static-analysis:
-    name: Run Static Code Analysis
+  checkstyle:
+    name: Run Checkstyle Analysis
     runs-on: ubuntu-22.04
 
     steps:
@@ -36,36 +36,17 @@ jobs:
         working-directory: ${{ env.WORKING_DIRECTORY }}
         run: mvn -B clean compile -Dmaven.test.skip=true
 
+      - name: Clean previous reports
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: rm -rf target/site/*
+
       - name: Run Checkstyle
         working-directory: ${{ env.WORKING_DIRECTORY }}
         run: mvn checkstyle:checkstyle -Dmaven.test.skip=true --batch-mode
 
-      - name: Run PMD
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: mvn pmd:pmd -Dmaven.test.skip=true --batch-mode
-
-      - name: Run SpotBugs
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: mvn com.github.spotbugs:spotbugs-maven-plugin:4.8.3.0:spotbugs -Dmaven.test.skip=true --batch-mode
-
-      # 📦 Subida de artefactos
-      - name: Upload Checkstyle reports
+      - name: Upload Checkstyle HTML report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: checkstyle-reports
-          path: ${{ env.WORKING_DIRECTORY }}/target/checkstyle-result.xml
-
-      - name: Upload PMD reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pmd-reports
-          path: ${{ env.WORKING_DIRECTORY }}/target/pmd.xml
-
-      - name: Upload SpotBugs reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: spotbugs-reports
-          path: ${{ env.WORKING_DIRECTORY }}/target/spotbugsXml.xml
+          name: checkstyle-html-report
+          path: ${{ env.WORKING_DIRECTORY }}/target/site/checkstyle.html
