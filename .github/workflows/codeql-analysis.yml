@@ -3,13 +3,22 @@ name: CodeQL Analysis - Java (Spring Boot, Maven)
 on:
   push:
     branches: [ "*" ]
+    paths:
+      - 'petstore-feature5-backend/**'
+      - '.github/workflows/**'
   pull_request:
     branches: [ "*" ]
+    paths:
+      - 'petstore-feature5-backend/**'
+
+env:
+  JAVA_VERSION: '21'
+  WORKING_DIRECTORY: 'petstore-feature5-backend'
 
 jobs:
   analyze:
     name: Analyze with CodeQL
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     permissions:
       actions: read
@@ -27,12 +36,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 21
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
-          cache: maven
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: 'maven'
+          cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pom.xml'
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
@@ -40,7 +50,8 @@ jobs:
           languages: ${{ matrix.language }}
 
       - name: Build with Maven
-        run: mvn clean package -DskipTests
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: mvn -B clean package -DskipTests
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
