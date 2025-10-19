@@ -1,4 +1,4 @@
-name: Static Analysis - Checkstyle Only
+name: SonarQube
 
 on:
   push:
@@ -16,37 +16,31 @@ env:
   WORKING_DIRECTORY: 'petstore-feature5-backend'
 
 jobs:
-  checkstyle:
-    name: Run Checkstyle Analysis
-    runs-on: ubuntu-22.04
-
+  build:
+    name: Build and analyze
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: 'maven'
-          cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pom.xml'
-
-      - name: Build project (compile only)
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: mvn -B clean compile -Dmaven.test.skip=true
-
-      - name: Clean previous reports
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: rm -rf target/site/*
-
-      - name: Run Checkstyle
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: mvn checkstyle:checkstyle -Dmaven.test.skip=true --batch-mode
-
-      - name: Upload Checkstyle HTML report
-        if: always()
-        uses: actions/upload-artifact@v4
+          java-version: 21
+          distribution: 'zulu' # Alternative distribution options are available.
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
         with:
-          name: checkstyle-html-report
-          path: ${{ env.WORKING_DIRECTORY }}/target/site/checkstyle.html
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      - name: Build and analyze
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=manuelRestrep0_petstore-feature5-backend
