@@ -109,6 +109,39 @@ public class GraphQLResolver {
     }
 
     @QueryMapping
+    public List<Promotion> promotionsExpired() {
+        // Público - sin autenticación
+        try {
+            return promotionService.getAllExpiredPromotionsEntities();
+        } catch (Exception e) {
+            System.err.println("Error getting expired promotions: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    @QueryMapping
+    public List<Promotion> promotionsScheduled() {
+        // Público - sin autenticación
+        try {
+            return promotionService.getAllScheduledPromotionsEntities();
+        } catch (Exception e) {
+            System.err.println("Error getting scheduled promotions: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    @QueryMapping
+    public List<Promotion> promotionsByStatus(@Argument String statusName) {
+        // Público - sin autenticación
+        try {
+            return promotionService.getPromotionsByStatusEntities(statusName);
+        } catch (Exception e) {
+            System.err.println("Error getting promotions by status: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    @QueryMapping
     public List<Promotion> promotionsByCategory(@Argument Integer categoryId) {
         // Público - sin autenticación
         try {

@@ -10,6 +10,9 @@ type Query {
     # Queries de promociones
     promotions: [Promotion!]!
     promotionsActive: [Promotion!]!
+    promotionsExpired: [Promotion!]!
+    promotionsScheduled: [Promotion!]!
+    promotionsByStatus(statusName: String!): [Promotion!]!
     promotionsByCategory(categoryId: ID!): [Promotion!]!
     promotion(id: ID!): Promotion
     

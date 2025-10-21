@@ -148,6 +148,27 @@ public class PromotionService {
     }
 
     /**
+     * Obtiene promociones expiradas como entidades para GraphQL
+     */
+    public List<Promotion> getAllExpiredPromotionsEntities() {
+        return promotionRepository.findExpiredPromotions();
+    }
+
+    /**
+     * Obtiene promociones programadas como entidades para GraphQL
+     */
+    public List<Promotion> getAllScheduledPromotionsEntities() {
+        return promotionRepository.findScheduledPromotions();
+    }
+
+    /**
+     * Obtiene promociones por estado específico como entidades para GraphQL
+     */
+    public List<Promotion> getPromotionsByStatusEntities(String statusName) {
+        return promotionRepository.findByStatusName(statusName);
+    }
+
+    /**
      * Obtiene promociones por categoría como entidades para GraphQL
      */
     public List<Promotion> getPromotionsByCategoryEntities(Integer categoryId) {
