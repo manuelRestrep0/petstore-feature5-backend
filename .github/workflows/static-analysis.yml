@@ -44,4 +44,4 @@ jobs:
         working-directory: ${{ env.WORKING_DIRECTORY }}
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=manuelRestrep0_petstore-feature5-backend -Dsonar.organization=manuelrestrep0 -Dsonar.host.url=https://sonarcloud.io
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=manuelRestrep0_petstore-feature5-backend -Dsonar.organization=manuelrestrep0 -Dsonar.host.url=https://sonarcloud.io -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
