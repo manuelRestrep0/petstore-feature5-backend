@@ -102,8 +102,8 @@ public class SecurityConfig {
                         
                     } else {
                         // 🔒 MODO PRODUCCIÓN: Más restrictivo
-                        authz.requestMatchers("/h2-console/**").denyAll(); // ❌ No H2 en producción
-                        authz.requestMatchers("/test", "/graphql-test").denyAll(); // ❌ No test endpoints
+                        authz.requestMatchers("/h2-console/**").denyAll(); //  No H2 en producción
+                        authz.requestMatchers("/test", "/graphql-test").denyAll(); //  No test endpoints
                         
                         // Solo actuator health público en producción
                         authz.requestMatchers("/actuator/**").authenticated();
