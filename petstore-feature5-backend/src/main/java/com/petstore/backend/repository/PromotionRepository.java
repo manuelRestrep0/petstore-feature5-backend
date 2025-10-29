@@ -1,13 +1,14 @@
 package com.petstore.backend.repository;
 
-import com.petstore.backend.entity.Promotion;
+import java.time.LocalDate;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
-import java.util.List;
+import com.petstore.backend.entity.Promotion;
 
 @Repository
 public interface PromotionRepository extends JpaRepository<Promotion, Integer> {
@@ -41,4 +42,12 @@ public interface PromotionRepository extends JpaRepository<Promotion, Integer> {
     // Buscar promociones por rango de descuento
     @Query("SELECT p FROM Promotion p WHERE p.discountValue >= :minDiscount AND p.discountValue <= :maxDiscount")
     List<Promotion> findByDiscountRange(@Param("minDiscount") Double minDiscount, @Param("maxDiscount") Double maxDiscount);
+    
+    // Establecer actor para triggers de base de datos
+    @Query(value = "SELECT public.fn_set_actor(:userId)", nativeQuery = true)
+    void setActor(@Param("userId") Integer userId);
+    
+    // Restaurar promoción usando función de base de datos
+    @Query(value = "SELECT public.fn_restore_promotion(:promotionId)", nativeQuery = true)
+    void restorePromotionUsingFunction(@Param("promotionId") Integer promotionId);
 }

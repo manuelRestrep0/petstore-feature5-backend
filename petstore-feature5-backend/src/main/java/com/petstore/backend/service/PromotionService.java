@@ -1,22 +1,29 @@
 package com.petstore.backend.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.petstore.backend.dto.CategoryDTO;
 import com.petstore.backend.dto.PromotionDTO;
+import com.petstore.backend.dto.PromotionDeletedDTO;
+import com.petstore.backend.entity.Category;
 import com.petstore.backend.entity.Promotion;
+import com.petstore.backend.entity.PromotionDeleted;
 import com.petstore.backend.entity.Status;
 import com.petstore.backend.entity.User;
-import com.petstore.backend.entity.Category;
+import com.petstore.backend.repository.CategoryRepository;
+import com.petstore.backend.repository.PromotionDeletedRepository;
 import com.petstore.backend.repository.PromotionRepository;
 import com.petstore.backend.repository.StatusRepository;
 import com.petstore.backend.repository.UserRepository;
-import com.petstore.backend.repository.CategoryRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class PromotionService {
@@ -32,6 +39,9 @@ public class PromotionService {
     
     @Autowired
     private CategoryRepository categoryRepository;
+    
+    @Autowired
+    private PromotionDeletedRepository promotionDeletedRepository;
 
     /**
      * Obtiene todas las promociones activas y vigentes
@@ -255,18 +265,161 @@ public class PromotionService {
         return promotionRepository.save(promotion);
     }
 
+
+    
     /**
-     * Elimina una promoción
+     * Obtiene promociones en la papelera temporal
      */
-    public boolean deletePromotion(Integer promotionId) {
+    public List<PromotionDeletedDTO> getDeletedPromotions() {
+        ZonedDateTime thirtyDaysAgo = ZonedDateTime.now().minusDays(30);
+        List<PromotionDeleted> deletedPromotions = promotionDeletedRepository.findRestorable(thirtyDaysAgo);
+        
+        return deletedPromotions.stream()
+                .map(this::convertDeletedToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Obtiene promociones eliminadas por un usuario específico
+     */
+    public List<PromotionDeletedDTO> getDeletedPromotionsByUser(Integer userId) {
+        List<PromotionDeleted> deletedPromotions = promotionDeletedRepository.findByDeletedByUserId(userId);
+        
+        return deletedPromotions.stream()
+                .map(this::convertDeletedToDTO)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Restaura una promoción de la papelera temporal
+     */
+    @Transactional
+    public boolean restorePromotion(Integer promotionId, Integer userId) {
         try {
-            if (promotionRepository.existsById(promotionId)) {
-                promotionRepository.deleteById(promotionId);
-                return true;
+            Optional<PromotionDeleted> deletedPromotionOpt = promotionDeletedRepository.findById(promotionId);
+            if (!deletedPromotionOpt.isPresent()) {
+                return false;
             }
+            
+            PromotionDeleted deletedPromotion = deletedPromotionOpt.get();
+            
+            // Verificar que no han pasado 30 días
+            ZonedDateTime thirtyDaysAgo = ZonedDateTime.now().minusDays(30);
+            if (deletedPromotion.getDeletedAt().isBefore(thirtyDaysAgo)) {
+                return false;
+            }
+            
+            // Crear nueva promoción basada en los datos eliminados
+            Promotion restoredPromotion = new Promotion();
+            restoredPromotion.setPromotionName(deletedPromotion.getPromotionName());
+            restoredPromotion.setDescription(deletedPromotion.getDescription());
+            restoredPromotion.setStartDate(deletedPromotion.getStartDate());
+            restoredPromotion.setEndDate(deletedPromotion.getEndDate());
+            restoredPromotion.setDiscountValue(deletedPromotion.getDiscountValue());
+            restoredPromotion.setStatus(deletedPromotion.getStatus());
+            restoredPromotion.setUser(deletedPromotion.getUser());
+            restoredPromotion.setCategory(deletedPromotion.getCategory());
+            
+            // Guardar promoción restaurada
+            promotionRepository.save(restoredPromotion);
+            
+            // Eliminar de papelera
+            promotionDeletedRepository.delete(deletedPromotion);
+            
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error restoring promotion: " + e.getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * Restaura una promoción usando la función de base de datos
+     */
+    @Transactional
+    public boolean restorePromotionUsingDBFunction(Integer promotionId, Integer userId) {
+        try {
+            // 1. Establecer el actor para la función de BD
+            if (userId != null) {
+                promotionRepository.setActor(userId);
+            }
+            
+            // 2. Llamar a la función de BD que hace todo automáticamente
+            promotionRepository.restorePromotionUsingFunction(promotionId);
+            
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error restoring promotion using DB function: " + e.getMessage());
+            return false;
+        }
+    }
+    
+    /**
+     * Convierte PromotionDeleted a DTO
+     */
+    private PromotionDeletedDTO convertDeletedToDTO(PromotionDeleted deletedPromotion) {
+        return new PromotionDeletedDTO(
+                deletedPromotion.getPromotionId(),
+                deletedPromotion.getPromotionName(),
+                deletedPromotion.getDescription(),
+                deletedPromotion.getStartDate(),
+                deletedPromotion.getEndDate(),
+                deletedPromotion.getDiscountValue(),
+                deletedPromotion.getStatus(), // Objeto completo
+                deletedPromotion.getUser(), // Objeto completo
+                deletedPromotion.getCategory(), // Objeto completo
+                deletedPromotion.getDeletedAt(),
+                deletedPromotion.getDeletedBy() // Objeto completo
+        );
+    }
+    
+    /**
+     * Elimina una promoción guardándola primero en papelera temporal
+     */
+    @Transactional
+    public boolean deletePromotion(Integer promotionId) {
+        return deletePromotion(promotionId, null);
+    }
+    
+    /**
+     * Elimina una promoción usando los triggers de la base de datos
+     * Los triggers se encargan de:
+     * 1. Desvincular productos (trg_promotions_soft_delete)
+     * 2. Mover a promotions_deleted (trg_promotions_soft_delete)
+     * 3. Registrar auditoría (trg_promotions_audit)
+     * 
+     * @param promotionId ID de la promoción a eliminar
+     * @param deletedByUserId ID del usuario que elimina (opcional)
+     */
+    @Transactional
+    public boolean deletePromotion(Integer promotionId, Integer deletedByUserId) {
+        try {
+            // Verificar que la promoción existe
+            Optional<Promotion> promotionOpt = promotionRepository.findById(promotionId);
+            if (!promotionOpt.isPresent()) {
+                return false;
+            }
+            
+            // 1. Establecer el actor (usuario que elimina) para los triggers de BD
+            if (deletedByUserId != null) {
+                // Usar función de BD para establecer el contexto del usuario
+                promotionRepository.setActor(deletedByUserId);
+            }
+            
+            // 2. ELIMINAR la promoción - Los triggers se encargan de TODO automáticamente:
+            //    - trg_promotions_soft_delete: Desvincula productos, mueve a promotions_deleted
+            //    - trg_promotions_audit: Registra la auditoría
+            //    - trg_promotions_deleted_guard: Impide duplicados en promotions_deleted
+            Promotion promotion = promotionOpt.get();
+            promotionRepository.delete(promotion);
+            
+            return true;
+            
         } catch (Exception e) {
             System.err.println("Error deleting promotion: " + e.getMessage());
+            e.printStackTrace();
             return false;
         }
     }
