@@ -145,9 +145,10 @@ query {
 ```
 
 **✨ Características:**
-- **21 endpoints REST** implementados con MapStruct
+- **25 endpoints REST** implementados con MapStruct
+- **21 operaciones GraphQL** (16 queries + 5 mutations) + 3 schema mappings
 - **DTOs seguros** sin información sensible  
-- **GraphQL** para consultas flexibles y relacionales
+- **API Dual** para máxima flexibilidad REST + GraphQL
 
 ## �🚀 Instalación
 
@@ -443,7 +444,7 @@ MapStruct genera **automáticamente** las implementaciones en `/target/generated
 
 ### 📊 Resumen de Endpoints
 
-- **Total**: 21 endpoints REST implementados
+- **Total**: 25 endpoints REST implementados
 - **Autenticación**: 5 endpoints (`/api/auth/*`)
 - **Productos**: 5 endpoints (`/api/products/*`)  
 - **Promociones**: 5 endpoints (`/api/promotions/*`)
@@ -557,7 +558,7 @@ curl -X GET http://localhost:8080/api/categories/info
 
 ### � Inventario GraphQL Completo
 
-#### 🔍 **Queries Disponibles (15 queries)**
+#### 🔍 **Queries Disponibles (16 queries)**
 
 | Query | Parámetros | Descripción | Auth | Retorna |
 |-------|------------|-------------|------|---------|
@@ -578,7 +579,7 @@ curl -X GET http://localhost:8080/api/categories/info
 | `productsByCategory` | `categoryId: ID!` | Productos por categoría | No | `[Product!]!` |
 | `product` | `id: ID!` | Producto específico por ID | No | `Product` |
 
-#### ⚡ **Mutations Disponibles (6 mutations)**
+#### ⚡ **Mutations Disponibles (5 mutations)**
 
 | Mutation | Parámetros | Descripción | Auth | Retorna |
 |----------|------------|-------------|------|---------|
@@ -591,8 +592,9 @@ curl -X GET http://localhost:8080/api/categories/info
 ### 🛡️ **Política de Seguridad GraphQL**
 
 - **Públicas**: 14 queries + 1 mutation (`login`) = **15 operaciones públicas**
-- **Protegidas**: 1 query (`currentUser`) + 5 mutations = **6 operaciones con JWT**
-- **Papelera temporal**: 2 queries + 2 mutations = **4 operaciones específicas**
+- **Protegidas**: 2 queries (`currentUser`, `deletedPromotions`, `deletedPromotionsByUser`) + 4 mutations = **6 operaciones con JWT**
+- **Papelera temporal**: 2 queries + 2 mutations = **4 operaciones específicas de trash bin**
+- **Schema Mappings**: 3 resolvers adicionales para relaciones (promotionProducts, categoryPromotions, categoryProducts)
 
 ### 🔐 **Autenticación JWT Real**
 
@@ -1943,7 +1945,8 @@ Para problemas o preguntas:
 **📊 Resumen de Verificación:**
 - **Metodología**: Análisis automático de anotaciones `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`
 - **Controllers verificados**: `AuthController`, `ProductController`, `PromotionController`, `CategoryController`
-- **Total de endpoints**: 21 endpoints REST confirmados como implementados
+- **Total de endpoints**: 25 endpoints REST confirmados como implementados
+- **Total de operaciones GraphQL**: 21 operaciones (16 queries + 5 mutations) + 3 schema mappings
 - **GraphQL**: 1 endpoint adicional verificado
 
 **✅ Estado de Implementación:**
