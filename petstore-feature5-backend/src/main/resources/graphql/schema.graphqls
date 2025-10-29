@@ -16,6 +16,10 @@ type Query {
     promotionsByCategory(categoryId: ID!): [Promotion!]!
     promotion(id: ID!): Promotion
     
+    # Queries de papelera temporal
+    deletedPromotions: [PromotionDeleted!]!
+    deletedPromotionsByUser(userId: ID!): [PromotionDeleted!]!
+    
     # Queries de categorías
     categories: [Category!]!
     category(id: ID!): Category
@@ -33,7 +37,10 @@ type Mutation {
     # Mutaciones de promociones (solo admin)
     createPromotion(input: PromotionInput!): Promotion!
     updatePromotion(id: ID!, input: PromotionInput!): Promotion!
-    deletePromotion(id: ID!): Boolean!
+    deletePromotion(id: ID!, userId: ID): Boolean!
+    
+    # Mutaciones de papelera temporal
+    restorePromotion(id: ID!, userId: ID!): Boolean!
 }
 
 type Product {
@@ -81,6 +88,21 @@ type User {
 type Role {
     roleId: ID!
     roleName: String!
+}
+
+type PromotionDeleted {
+    promotionId: ID!
+    promotionName: String!
+    description: String
+    startDate: String!
+    endDate: String!
+    discountValue: Float!
+    status: Status!
+    user: User
+    category: Category
+    deletedAt: String!
+    deletedBy: User
+    daysUntilPurge: Int!
 }
 
 type GraphQLLoginResponse {

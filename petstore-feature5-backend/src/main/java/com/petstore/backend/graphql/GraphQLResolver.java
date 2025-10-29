@@ -13,6 +13,7 @@ import org.springframework.stereotype.Controller;
 
 import com.petstore.backend.dto.LoginResponse;
 import com.petstore.backend.dto.PromotionDTO;
+import com.petstore.backend.dto.PromotionDeletedDTO;
 import com.petstore.backend.entity.Category;
 import com.petstore.backend.entity.Product;
 import com.petstore.backend.entity.Promotion;
@@ -62,6 +63,15 @@ public class GraphQLResolver {
         }
     }
     
+
+
+    // === QUERIES ===
+
+    @QueryMapping
+    public String health() {
+        return "GraphQL API is running! " + java.time.LocalDateTime.now();
+    }
+
     /**
      * Obtener usuario autenticado actual
      */
@@ -71,19 +81,9 @@ public class GraphQLResolver {
         return userRepository.findByEmail(auth.getName()).orElse(null);
     }
 
-    // === QUERIES ===
-
-    @QueryMapping
-    public String health() {
-        return "GraphQL API is running! " + java.time.LocalDateTime.now();
-    }
-
     @QueryMapping
     public User currentUser() {
-        // Solo requerir autenticación para currentUser
-        requireAuthentication();
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return userRepository.findByEmail(auth.getName()).orElse(null);
+        return getAuthenticatedUser();
     }
 
     @QueryMapping
@@ -260,7 +260,6 @@ public class GraphQLResolver {
             );
         } catch (Exception e) {
             System.err.println("Error creating promotion: " + e.getMessage());
-            e.printStackTrace();
             throw new RuntimeException("Failed to create promotion: " + e.getMessage());
         }
     }
@@ -289,18 +288,17 @@ public class GraphQLResolver {
             return updated;
         } catch (Exception e) {
             System.err.println("Error updating promotion: " + e.getMessage());
-            e.printStackTrace();
             throw new RuntimeException("Failed to update promotion: " + e.getMessage());
         }
     }
 
     @MutationMapping
-    public Boolean deletePromotion(@Argument Integer id) {
+    public Boolean deletePromotion(@Argument Integer id, @Argument Integer userId) {
         requireAuthentication();
         try {
-            System.out.println("Deleting promotion with id: " + id);
+            System.out.println("Deleting promotion with id: " + id + (userId != null ? " by user: " + userId : ""));
             
-            boolean deleted = promotionService.deletePromotion(id);
+            boolean deleted = promotionService.deletePromotion(id, userId);
             
             if (!deleted) {
                 throw new RuntimeException("Promotion not found with id: " + id);
@@ -309,8 +307,58 @@ public class GraphQLResolver {
             return true;
         } catch (Exception e) {
             System.err.println("Error deleting promotion: " + e.getMessage());
-            e.printStackTrace();
             throw new RuntimeException("Failed to delete promotion: " + e.getMessage());
+        }
+    }
+
+    // ================== QUERIES DE PAPELERA TEMPORAL ==================
+
+    @QueryMapping
+    public List<PromotionDeletedDTO> deletedPromotions() {
+        requireAuthentication();
+        try {
+            return promotionService.getDeletedPromotions();
+        } catch (Exception e) {
+            System.err.println("Error fetching deleted promotions: " + e.getMessage());
+            throw new RuntimeException("Failed to fetch deleted promotions: " + e.getMessage());
+        }
+    }
+
+    @QueryMapping 
+    public List<PromotionDeletedDTO> deletedPromotionsByUser(@Argument String userId) {
+        requireAuthentication();
+        try {
+            // Convertir String ID a Integer
+            Integer userIdInt = Integer.parseInt(userId);
+            return promotionService.getDeletedPromotionsByUser(userIdInt);
+        } catch (NumberFormatException e) {
+            System.err.println("Invalid userId format: " + userId);
+            throw new RuntimeException("Invalid userId format: " + userId);
+        } catch (Exception e) {
+            System.err.println("Error fetching deleted promotions by user: " + e.getMessage());
+            throw new RuntimeException("Failed to fetch deleted promotions by user: " + e.getMessage());
+        }
+    }
+
+    // ================== MUTACIONES DE PAPELERA TEMPORAL ==================
+
+    @MutationMapping
+    public Boolean restorePromotion(@Argument Integer id, @Argument Integer userId) {
+        requireAuthentication();
+        try {
+            System.out.println("Restoring promotion with id: " + id + " by user: " + userId);
+            
+            // Usar la función de base de datos que maneja todo automáticamente
+            boolean restored = promotionService.restorePromotionUsingDBFunction(id, userId);
+            
+            if (!restored) {
+                throw new RuntimeException("Failed to restore promotion with id: " + id);
+            }
+            
+            return true;
+        } catch (Exception e) {
+            System.err.println("Error restoring promotion: " + e.getMessage());
+            throw new RuntimeException("Failed to restore promotion: " + e.getMessage());
         }
     }
 
