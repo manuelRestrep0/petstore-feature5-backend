@@ -1,17 +1,23 @@
 package com.petstore.backend.util;
 
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.stereotype.Component;
-
 import java.security.Key;
 import java.util.Date;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 
 @Component
 public class JwtUtil {
 
-    private final String SECRET = "MiSecretoMuyLargoParaJWTQueDebeSerSeguro12345"; // mínimo 32 caracteres
-    private final long EXPIRATION = 1000 * 60 * 60 * 24; // 24h
+    @Value("${SECRET}")
+    private String SECRET; // mínimo 32 caracteres
+    @Value("#{${EXPIRATION}}")
+    private long EXPIRATION; // 24h
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(SECRET.getBytes());
