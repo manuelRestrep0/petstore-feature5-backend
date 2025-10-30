@@ -22,6 +22,11 @@ import com.petstore.backend.service.AuthService;
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:5500", "http://localhost:5500"})
 public class AuthController {
 
+    // indicador de estado por defecto
+    String status = "valid";
+    // indicador de mensaje por defecto
+    String message = "message";
+
     @Autowired
     private AuthService authService;
 
@@ -33,7 +38,7 @@ public class AuthController {
     public ResponseEntity<Map<String, Object>> getStatus() {
         return ResponseEntity.ok().body(Map.of(
             "status", "OK",
-            "message", "Auth service is running",
+            message, "Auth service is running",
             "timestamp", java.time.LocalDateTime.now(),
             "endpoints", List.of(
                 "POST /api/auth/login - Login de Marketing Admin",
@@ -82,18 +87,18 @@ public class AuthController {
             
             // Verificar el token
             boolean isValid = authService.validateToken(token);
-            
+
             if (isValid) {
                 // Devolver un Map.of() para una respuesta válida
-                return ResponseEntity.ok().body(Map.of("valid", true, "message", "Token válido"));
+                return ResponseEntity.ok().body(Map.of(status, true, message, "Token válido"));
             } else {
                 // Devolver un Map.of() para una respuesta inválida
-                return ResponseEntity.status(401).body(Map.of("valid", false, "message", "Token inválido"));
+                return ResponseEntity.status(401).body(Map.of(status, false, message, "Token inválido"));
             }
             
         } catch (Exception e) {
             // Devolver un Map.of() para una respuesta con excepción
-            return ResponseEntity.status(401).body(Map.of("valid", false, "message", "Token inválido o malformado"));
+            return ResponseEntity.status(401).body(Map.of(status, false, message, "Token inválido o malformado"));
         }
     }
 
@@ -123,6 +128,6 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout() {
         // En JWT stateless, el logout se maneja en el frontend eliminando el token
-        return ResponseEntity.ok().body(Map.of("message", "Logout exitoso"));
+        return ResponseEntity.ok().body(Map.of(message, "Logout exitoso"));
     }
 }

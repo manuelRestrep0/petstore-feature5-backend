@@ -15,19 +15,19 @@ import io.jsonwebtoken.security.Keys;
 public class JwtUtil {
 
     @Value("${SECRET}")
-    private String SECRET; // mínimo 32 caracteres
+    private String secret; // mínimo 32 caracteres
     @Value("#{${EXPIRATION}}")
-    private long EXPIRATION; // 24h
+    private long expiration; // 24h
 
     private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(SECRET.getBytes());
+        return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
     public String generateToken(String email) {
         return Jwts.builder()
                 .setSubject(email)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }

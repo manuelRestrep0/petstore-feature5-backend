@@ -20,7 +20,7 @@ public class SecurityConfig {
     private final CorsConfigurationSource corsConfigurationSource;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final Environment environment;
-    private final String productApiPattern = "/api/products/**";
+    private static final String PRODUCTAPIPATTERN = "/api/products/**";
 
 
     @Value("${app.security.whitelist:}")
@@ -97,10 +97,10 @@ public class SecurityConfig {
                         authz.requestMatchers("/test", "/graphql-test").permitAll(); // Test endpoints
                         
                         // Productos públicos para testing en desarrollo
-                        authz.requestMatchers("GET", productApiPattern).permitAll();
-                        authz.requestMatchers("POST", productApiPattern).authenticated(); // Crear requiere auth
-                        authz.requestMatchers("PUT", productApiPattern).authenticated(); // Actualizar requiere auth
-                        authz.requestMatchers("DELETE", productApiPattern).authenticated(); // Eliminar requiere auth
+                        authz.requestMatchers("GET", PRODUCTAPIPATTERN).permitAll();
+                        authz.requestMatchers("POST", PRODUCTAPIPATTERN).authenticated(); // Crear requiere auth
+                        authz.requestMatchers("PUT", PRODUCTAPIPATTERN).authenticated(); // Actualizar requiere auth
+                        authz.requestMatchers("DELETE", PRODUCTAPIPATTERN).authenticated(); // Eliminar requiere auth
                         
                     } else {
                         // 🔒 MODO PRODUCCIÓN: Más restrictivo
@@ -112,7 +112,7 @@ public class SecurityConfig {
                         
                         // Productos: solo lectura pública, modificaciones requieren auth
                         authz.requestMatchers("GET", "/api/products", "/api/products/category/*").permitAll();
-                        authz.requestMatchers(productApiPattern).authenticated();
+                        authz.requestMatchers(PRODUCTAPIPATTERN).authenticated();
                     }
                     
                     // Promociones siempre requieren autenticación (excepto algunas lecturas públicas)
