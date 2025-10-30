@@ -243,7 +243,7 @@
 				</executions>
 			</plugin>
 		</plugins>
-		<finalName>coverage</finalName>
+		<finalName>petstore-feature5-backend</finalName>
 	</build>
 
 </project>
