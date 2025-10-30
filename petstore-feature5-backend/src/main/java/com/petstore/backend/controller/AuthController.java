@@ -1,11 +1,21 @@
 package com.petstore.backend.controller;
 
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.petstore.backend.dto.LoginRequest;
 import com.petstore.backend.dto.LoginResponse;
 import com.petstore.backend.service.AuthService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -20,12 +30,12 @@ public class AuthController {
      * GET /api/auth/status
      */
     @GetMapping("/status")
-    public ResponseEntity<?> getStatus() {
-        return ResponseEntity.ok().body(java.util.Map.of(
+    public ResponseEntity<Map<String, Object>> getStatus() {
+        return ResponseEntity.ok().body(Map.of(
             "status", "OK",
             "message", "Auth service is running",
             "timestamp", java.time.LocalDateTime.now(),
-            "endpoints", java.util.List.of(
+            "endpoints", List.of(
                 "POST /api/auth/login - Login de Marketing Admin",
                 "GET /api/auth/verify - Verificar token",
                 "GET /api/auth/me - Obtener perfil del usuario",
@@ -65,7 +75,7 @@ public class AuthController {
      * GET /api/auth/verify
      */
     @GetMapping("/verify")
-    public ResponseEntity<?> verifyToken(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<Map<String, Object>> verifyToken(@RequestHeader("Authorization") String authHeader) {
         try {
             // Extraer el token del header Authorization
             String token = authHeader.substring(7); // Remover "Bearer "
@@ -74,13 +84,16 @@ public class AuthController {
             boolean isValid = authService.validateToken(token);
             
             if (isValid) {
-                return ResponseEntity.ok().body("{\"valid\": true, \"message\": \"Token válido\"}");
+                // Devolver un Map.of() para una respuesta válida
+                return ResponseEntity.ok().body(Map.of("valid", true, "message", "Token válido"));
             } else {
-                return ResponseEntity.status(401).body("{\"valid\": false, \"message\": \"Token inválido\"}");
+                // Devolver un Map.of() para una respuesta inválida
+                return ResponseEntity.status(401).body(Map.of("valid", false, "message", "Token inválido"));
             }
             
         } catch (Exception e) {
-            return ResponseEntity.status(401).body("{\"valid\": false, \"message\": \"Token inválido o malformado\"}");
+            // Devolver un Map.of() para una respuesta con excepción
+            return ResponseEntity.status(401).body(Map.of("valid", false, "message", "Token inválido o malformado"));
         }
     }
 
@@ -89,7 +102,7 @@ public class AuthController {
      * GET /api/auth/me
      */
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<Map<String, Object>> getCurrentUser(@RequestHeader("Authorization") String authHeader) {
         try {
             String token = authHeader.substring(7); // Remover "Bearer "
             
@@ -99,7 +112,7 @@ public class AuthController {
             return ResponseEntity.ok(userInfo);
             
         } catch (Exception e) {
-            return ResponseEntity.status(401).body("{\"error\": \"Token inválido\"}");
+            return ResponseEntity.status(401).body(Map.of("error", "Token inválido"));
         }
     }
 
@@ -108,8 +121,8 @@ public class AuthController {
      * POST /api/auth/logout
      */
     @PostMapping("/logout")
-    public ResponseEntity<?> logout() {
+    public ResponseEntity<Map<String, String>> logout() {
         // En JWT stateless, el logout se maneja en el frontend eliminando el token
-        return ResponseEntity.ok().body("{\"message\": \"Logout exitoso\"}");
+        return ResponseEntity.ok().body(Map.of("message", "Logout exitoso"));
     }
 }
