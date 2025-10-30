@@ -39,6 +39,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 
                 // Deshabilitar CSRF para API REST/GraphQL
+                // CSRF protection is disabled because this backend uses JWT (Bearer token) authentication.
+                // Requests are stateless and do not rely on session cookies, making CSRF attacks not applicable.
                 .csrf(AbstractHttpConfigurer::disable)
                 
                 // Configurar headers de seguridad
@@ -60,9 +62,7 @@ public class SecurityConfig {
                 
                 // Agregar filtro JWT antes del filtro de autenticación de usuario/contraseña
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .sessionManagement(session -> 
-                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                
                 
                 // Configurar autorización de endpoints
                 .authorizeHttpRequests(authz -> {
