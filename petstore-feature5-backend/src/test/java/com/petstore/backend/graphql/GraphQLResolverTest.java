@@ -119,6 +119,8 @@ class GraphQLResolverTest {
         testPromotion.setCategory(testCategory);
     }
 
+    // === TESTS FROM ORIGINAL FILE ===
+
     @Test
     void health_ShouldReturnHealthMessage() {
         // When
@@ -157,6 +159,146 @@ class GraphQLResolverTest {
         assertTrue(result.isEmpty());
     }
 
+    // === ADDITIONAL TESTS FOR BETTER COVERAGE ===
+
+    @Test
+    void promotionsActive_ShouldReturnActivePromotions() {
+        // Given
+        List<Promotion> activePromotions = Arrays.asList(testPromotion);
+        when(promotionService.getAllActivePromotionsEntities()).thenReturn(activePromotions);
+
+        // When
+        List<Promotion> result = graphQLResolver.promotionsActive();
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Summer Sale", result.get(0).getPromotionName());
+    }
+
+    @Test
+    void promotionsActive_WhenException_ShouldReturnEmptyList() {
+        // Given
+        when(promotionService.getAllActivePromotionsEntities()).thenThrow(new RuntimeException("Service error"));
+
+        // When
+        List<Promotion> result = graphQLResolver.promotionsActive();
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+
+    @Test
+    void promotionsScheduled_ServiceException_ShouldReturnEmptyList() {
+        // Given
+        when(promotionService.getAllScheduledPromotionsEntities()).thenThrow(new RuntimeException("Service error"));
+
+        // When
+        List<Promotion> result = graphQLResolver.promotionsScheduled();
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void promotionsByStatus_ShouldReturnPromotionsByStatus_Test() {
+        // Given
+        List<Promotion> promotions = Arrays.asList(testPromotion);
+        when(promotionService.getPromotionsByStatusEntities("ACTIVE")).thenReturn(promotions);
+
+        // When
+        List<Promotion> result = graphQLResolver.promotionsByStatus("ACTIVE");
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Summer Sale", result.get(0).getPromotionName());
+    }
+
+    @Test
+    void promotion_ShouldReturnSinglePromotion() {
+        // Given
+        when(promotionRepository.findById(1)).thenReturn(Optional.of(testPromotion));
+
+        // When
+        Promotion result = graphQLResolver.promotion(1);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("Summer Sale", result.getPromotionName());
+    }
+
+    @Test
+    void promotion_WhenNotFound_ShouldReturnNull() {
+        // Given
+        when(promotionRepository.findById(999)).thenReturn(Optional.empty());
+
+        // When
+        Promotion result = graphQLResolver.promotion(999);
+
+        // Then
+        assertEquals(null, result);
+    }
+
+    @Test
+    void categories_ShouldReturnAllCategories() {
+        // Given
+        List<Category> categories = Arrays.asList(testCategory);
+        when(categoryRepository.findAll()).thenReturn(categories);
+
+        // When
+        List<Category> result = graphQLResolver.categories();
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Electronics", result.get(0).getCategoryName());
+    }
+
+    @Test
+    void category_ShouldReturnSingleCategory() {
+        // Given
+        when(categoryRepository.findById(1)).thenReturn(Optional.of(testCategory));
+
+        // When
+        Category result = graphQLResolver.category(1);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("Electronics", result.getCategoryName());
+    }
+
+    @Test
+    void products_ShouldReturnAllProducts() {
+        // Given
+        List<Product> products = Arrays.asList(testProduct);
+        when(productRepository.findAll()).thenReturn(products);
+
+        // When
+        List<Product> result = graphQLResolver.products();
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Smartphone", result.get(0).getProductName());
+    }
+
+    @Test
+    void product_ShouldReturnSingleProduct() {
+        // Given
+        when(productRepository.findById(1)).thenReturn(Optional.of(testProduct));
+
+        // When
+        Product result = graphQLResolver.product(1);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("Smartphone", result.getProductName());
+    }
+
     @Test
     void currentUser_WhenAuthenticated_ShouldReturnUser() {
         // Given
@@ -181,62 +323,6 @@ class GraphQLResolverTest {
             graphQLResolver.currentUser();
         });
         assertTrue(exception.getMessage().contains("Authentication required"));
-    }
-
-    @Test
-    void categories_ShouldReturnAllCategories() {
-        // Given
-        List<Category> categories = Arrays.asList(testCategory);
-        when(categoryRepository.findAll()).thenReturn(categories);
-
-        // When
-        List<Category> result = graphQLResolver.categories();
-
-        // Then
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("Electronics", result.get(0).getCategoryName());
-    }
-
-    @Test
-    void categories_WhenException_ShouldReturnEmptyList() {
-        // Given
-        when(categoryRepository.findAll()).thenThrow(new RuntimeException("Database error"));
-
-        // When
-        List<Category> result = graphQLResolver.categories();
-
-        // Then
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
-    }
-
-    @Test
-    void products_ShouldReturnAllProducts() {
-        // Given
-        List<Product> products = Arrays.asList(testProduct);
-        when(productRepository.findAll()).thenReturn(products);
-
-        // When
-        List<Product> result = graphQLResolver.products();
-
-        // Then
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("Smartphone", result.get(0).getProductName());
-    }
-
-    @Test
-    void products_WhenException_ShouldReturnEmptyList() {
-        // Given
-        when(productRepository.findAll()).thenThrow(new RuntimeException("Database error"));
-
-        // When
-        List<Product> result = graphQLResolver.products();
-
-        // Then
-        assertNotNull(result);
-        assertTrue(result.isEmpty());
     }
 
     @Test
@@ -270,7 +356,7 @@ class GraphQLResolverTest {
 
         // Then
         assertNotNull(result);
-        assertFalse(result.isSuccess()); // Use assertFalse instead of assertEquals(false, ...)
+        assertFalse(result.isSuccess());
         assertTrue(result.getMessage().contains("Invalid credentials") || result.getMessage().contains("authentication"));
     }
 
@@ -283,7 +369,6 @@ class GraphQLResolverTest {
         com.petstore.backend.dto.PromotionDTO promotionDTO = new com.petstore.backend.dto.PromotionDTO();
         promotionDTO.setPromotionName("Summer Sale");
         promotionDTO.setDescription("Great discount");
-        // Fix the null pointer exception by setting required dates and percentage
         promotionDTO.setStartDate(java.time.LocalDateTime.now());
         promotionDTO.setEndDate(java.time.LocalDateTime.now().plusDays(30));
         promotionDTO.setDiscountPercentage(java.math.BigDecimal.valueOf(20.0));
@@ -325,5 +410,575 @@ class GraphQLResolverTest {
         when(authentication.getName()).thenReturn("anonymousUser");
         when(securityContext.getAuthentication()).thenReturn(authentication);
         SecurityContextHolder.setContext(securityContext);
+    }
+
+    // === ADDITIONAL COMPREHENSIVE TESTS FOR FULL COVERAGE ===
+
+    @Test
+    void promotionsExpired_ShouldReturnExpiredPromotions() {
+        // Given
+        List<Promotion> expiredPromotions = Arrays.asList(testPromotion);
+        when(promotionService.getAllExpiredPromotionsEntities()).thenReturn(expiredPromotions);
+
+        // When
+        List<Promotion> result = graphQLResolver.promotionsExpired();
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Summer Sale", result.get(0).getPromotionName());
+    }
+
+    @Test
+    void promotionsExpired_WhenException_ShouldReturnEmptyList() {
+        // Given
+        when(promotionService.getAllExpiredPromotionsEntities()).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        List<Promotion> result = graphQLResolver.promotionsExpired();
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void promotionsScheduled_ShouldReturnScheduledPromotions() {
+        // Given
+        List<Promotion> scheduledPromotions = Arrays.asList(testPromotion);
+        when(promotionService.getAllScheduledPromotionsEntities()).thenReturn(scheduledPromotions);
+
+        // When
+        List<Promotion> result = graphQLResolver.promotionsScheduled();
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Summer Sale", result.get(0).getPromotionName());
+    }
+
+
+    @Test
+    void promotionsByStatus_WhenException_ShouldReturnEmptyList() {
+        // Given
+        when(promotionService.getPromotionsByStatusEntities("ACTIVE")).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        List<Promotion> result = graphQLResolver.promotionsByStatus("ACTIVE");
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void promotionsByCategory_ShouldReturnPromotionsByCategory() {
+        // Given
+        List<Promotion> promotionsByCategory = Arrays.asList(testPromotion);
+        when(promotionService.getPromotionsByCategoryEntities(1)).thenReturn(promotionsByCategory);
+
+        // When
+        List<Promotion> result = graphQLResolver.promotionsByCategory(1);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Summer Sale", result.get(0).getPromotionName());
+    }
+
+    @Test
+    void promotionsByCategory_WhenException_ShouldReturnEmptyList() {
+        // Given
+        when(promotionService.getPromotionsByCategoryEntities(1)).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        List<Promotion> result = graphQLResolver.promotionsByCategory(1);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void categories_WhenException_ShouldReturnEmptyList() {
+        // Given
+        when(categoryRepository.findAll()).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        List<Category> result = graphQLResolver.categories();
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void category_WhenException_ShouldReturnNull() {
+        // Given
+        when(categoryRepository.findById(1)).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        Category result = graphQLResolver.category(1);
+
+        // Then
+        assertEquals(null, result);
+    }
+
+    @Test
+    void category_WhenNotFound_ShouldReturnNull() {
+        // Given
+        when(categoryRepository.findById(999)).thenReturn(Optional.empty());
+
+        // When
+        Category result = graphQLResolver.category(999);
+
+        // Then
+        assertEquals(null, result);
+    }
+
+    @Test
+    void products_WhenException_ShouldReturnEmptyList() {
+        // Given
+        when(productRepository.findAll()).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        List<Product> result = graphQLResolver.products();
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void productsByCategory_ShouldReturnProductsByCategory() {
+        // Given
+        List<Product> productsByCategory = Arrays.asList(testProduct);
+        when(productRepository.findByCategoryCategoryId(1)).thenReturn(productsByCategory);
+
+        // When
+        List<Product> result = graphQLResolver.productsByCategory(1);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Smartphone", result.get(0).getProductName());
+    }
+
+    @Test
+    void productsByCategory_WhenException_ShouldReturnEmptyList() {
+        // Given
+        when(productRepository.findByCategoryCategoryId(1)).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        List<Product> result = graphQLResolver.productsByCategory(1);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void product_WhenException_ShouldReturnNull() {
+        // Given
+        when(productRepository.findById(1)).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        Product result = graphQLResolver.product(1);
+
+        // Then
+        assertEquals(null, result);
+    }
+
+    @Test
+    void product_WhenNotFound_ShouldReturnNull() {
+        // Given
+        when(productRepository.findById(999)).thenReturn(Optional.empty());
+
+        // When
+        Product result = graphQLResolver.product(999);
+
+        // Then
+        assertEquals(null, result);
+    }
+
+    @Test
+    void updatePromotion_WhenAuthenticated_ShouldUpdatePromotion() {
+        // Given
+        setupAuthenticatedUser();
+        when(userRepository.findByEmail("admin@petstore.com")).thenReturn(Optional.of(testUser));
+        
+        com.petstore.backend.dto.PromotionDTO promotionDTO = new com.petstore.backend.dto.PromotionDTO();
+        promotionDTO.setPromotionName("Updated Summer Sale");
+        promotionDTO.setDescription("Updated discount");
+        promotionDTO.setStartDate(java.time.LocalDateTime.now());
+        promotionDTO.setEndDate(java.time.LocalDateTime.now().plusDays(30));
+        promotionDTO.setDiscountPercentage(java.math.BigDecimal.valueOf(25.0));
+        
+        when(promotionService.updatePromotion(any(), anyString(), anyString(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(testPromotion);
+
+        // When
+        Promotion result = graphQLResolver.updatePromotion(1, promotionDTO);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("Summer Sale", result.getPromotionName());
+    }
+
+    @Test
+    void updatePromotion_WhenNotAuthenticated_ShouldThrowException() {
+        // Given
+        setupUnauthenticatedUser();
+        com.petstore.backend.dto.PromotionDTO promotionDTO = new com.petstore.backend.dto.PromotionDTO();
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.updatePromotion(1, promotionDTO);
+        });
+        assertTrue(exception.getMessage().contains("Authentication required"));
+    }
+
+    @Test
+    void updatePromotion_WhenServiceThrowsException_ShouldThrowRuntimeException() {
+        // Given
+        setupAuthenticatedUser();
+        com.petstore.backend.dto.PromotionDTO promotionDTO = new com.petstore.backend.dto.PromotionDTO();
+        promotionDTO.setPromotionName("Updated Sale");
+        promotionDTO.setDescription("Updated description");
+        promotionDTO.setStartDate(java.time.LocalDateTime.now());
+        promotionDTO.setEndDate(java.time.LocalDateTime.now().plusDays(30));
+        promotionDTO.setDiscountPercentage(java.math.BigDecimal.valueOf(25.0));
+        
+        // Create a category DTO to avoid null pointer
+        com.petstore.backend.dto.CategoryDTO categoryDTO = new com.petstore.backend.dto.CategoryDTO();
+        categoryDTO.setCategoryId(1);
+        promotionDTO.setCategory(categoryDTO);
+        
+        when(promotionService.updatePromotion(any(Integer.class), anyString(), anyString(), 
+                any(java.time.LocalDate.class), any(java.time.LocalDate.class), any(Double.class), 
+                any(Integer.class), any(Integer.class), any(Integer.class)))
+                .thenThrow(new RuntimeException("Database error"));
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.updatePromotion(1, promotionDTO);
+        });
+        assertTrue(exception.getMessage().contains("Failed to update promotion"));
+    }
+
+    @Test
+    void deletePromotion_WhenAuthenticated_ShouldDeletePromotion() {
+        // Given
+        setupAuthenticatedUser();
+        when(promotionService.deletePromotion(1, 1)).thenReturn(true);
+
+        // When
+        Boolean result = graphQLResolver.deletePromotion(1, 1);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result);
+    }
+
+    @Test
+    void deletePromotion_WhenNotAuthenticated_ShouldThrowException() {
+        // Given
+        setupUnauthenticatedUser();
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.deletePromotion(1, 1);
+        });
+        assertTrue(exception.getMessage().contains("Authentication required"));
+    }
+
+    @Test
+    void deletePromotion_WhenPromotionNotFound_ShouldThrowException() {
+        // Given
+        setupAuthenticatedUser();
+        when(promotionService.deletePromotion(999, 1)).thenReturn(false);
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.deletePromotion(999, 1);
+        });
+        assertTrue(exception.getMessage().contains("Promotion not found"));
+    }
+
+    @Test
+    void deletePromotion_WhenServiceThrowsException_ShouldThrowRuntimeException() {
+        // Given
+        setupAuthenticatedUser();
+        when(promotionService.deletePromotion(1, 1)).thenThrow(new RuntimeException("Database error"));
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.deletePromotion(1, 1);
+        });
+        assertTrue(exception.getMessage().contains("Failed to delete promotion"));
+    }
+
+    @Test
+    void deletedPromotions_WhenAuthenticated_ShouldReturnDeletedPromotions() {
+        // Given
+        setupAuthenticatedUser();
+        com.petstore.backend.dto.PromotionDeletedDTO deletedPromo = new com.petstore.backend.dto.PromotionDeletedDTO();
+        deletedPromo.setPromotionName("Deleted Promo");
+        List<com.petstore.backend.dto.PromotionDeletedDTO> deletedPromotions = Arrays.asList(deletedPromo);
+        when(promotionService.getDeletedPromotions()).thenReturn(deletedPromotions);
+
+        // When
+        List<com.petstore.backend.dto.PromotionDeletedDTO> result = graphQLResolver.deletedPromotions();
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Deleted Promo", result.get(0).getPromotionName());
+    }
+
+    @Test
+    void deletedPromotions_WhenNotAuthenticated_ShouldThrowException() {
+        // Given
+        setupUnauthenticatedUser();
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.deletedPromotions();
+        });
+        assertTrue(exception.getMessage().contains("Authentication required"));
+    }
+
+    @Test
+    void deletedPromotions_WhenServiceThrowsException_ShouldThrowRuntimeException() {
+        // Given
+        setupAuthenticatedUser();
+        when(promotionService.getDeletedPromotions()).thenThrow(new RuntimeException("Database error"));
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.deletedPromotions();
+        });
+        assertTrue(exception.getMessage().contains("Failed to fetch deleted promotions"));
+    }
+
+    @Test
+    void deletedPromotionsByUser_WhenAuthenticated_ShouldReturnDeletedPromotionsByUser() {
+        // Given
+        setupAuthenticatedUser();
+        com.petstore.backend.dto.PromotionDeletedDTO deletedPromo = new com.petstore.backend.dto.PromotionDeletedDTO();
+        deletedPromo.setPromotionName("User Deleted Promo");
+        List<com.petstore.backend.dto.PromotionDeletedDTO> deletedPromotions = Arrays.asList(deletedPromo);
+        when(promotionService.getDeletedPromotionsByUser(1)).thenReturn(deletedPromotions);
+
+        // When
+        List<com.petstore.backend.dto.PromotionDeletedDTO> result = graphQLResolver.deletedPromotionsByUser("1");
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("User Deleted Promo", result.get(0).getPromotionName());
+    }
+
+    @Test
+    void deletedPromotionsByUser_WhenNotAuthenticated_ShouldThrowException() {
+        // Given
+        setupUnauthenticatedUser();
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.deletedPromotionsByUser("1");
+        });
+        assertTrue(exception.getMessage().contains("Authentication required"));
+    }
+
+    @Test
+    void deletedPromotionsByUser_WhenInvalidUserId_ShouldThrowException() {
+        // Given
+        setupAuthenticatedUser();
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.deletedPromotionsByUser("invalid");
+        });
+        assertTrue(exception.getMessage().contains("Invalid userId format"));
+    }
+
+    @Test
+    void deletedPromotionsByUser_WhenServiceThrowsException_ShouldThrowRuntimeException() {
+        // Given
+        setupAuthenticatedUser();
+        when(promotionService.getDeletedPromotionsByUser(1)).thenThrow(new RuntimeException("Database error"));
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.deletedPromotionsByUser("1");
+        });
+        assertTrue(exception.getMessage().contains("Failed to fetch deleted promotions by user"));
+    }
+
+    @Test
+    void restorePromotion_WhenAuthenticated_ShouldRestorePromotion() {
+        // Given
+        setupAuthenticatedUser();
+        when(promotionService.restorePromotionUsingDBFunction(1, 1)).thenReturn(true);
+
+        // When
+        Boolean result = graphQLResolver.restorePromotion(1, 1);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result);
+    }
+
+    @Test
+    void restorePromotion_WhenNotAuthenticated_ShouldThrowException() {
+        // Given
+        setupUnauthenticatedUser();
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.restorePromotion(1, 1);
+        });
+        assertTrue(exception.getMessage().contains("Authentication required"));
+    }
+
+    @Test
+    void restorePromotion_WhenPromotionNotFound_ShouldThrowException() {
+        // Given
+        setupAuthenticatedUser();
+        when(promotionService.restorePromotionUsingDBFunction(999, 1)).thenReturn(false);
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.restorePromotion(999, 1);
+        });
+        assertTrue(exception.getMessage().contains("Failed to restore promotion"));
+    }
+
+    @Test
+    void restorePromotion_WhenServiceThrowsException_ShouldThrowRuntimeException() {
+        // Given
+        setupAuthenticatedUser();
+        when(promotionService.restorePromotionUsingDBFunction(1, 1)).thenThrow(new RuntimeException("Database error"));
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.restorePromotion(1, 1);
+        });
+        assertTrue(exception.getMessage().contains("Failed to restore promotion"));
+    }
+
+    // === SCHEMA MAPPING TESTS ===
+
+    @Test
+    void promotionProducts_ShouldReturnProductsForPromotion() {
+        // Given
+        List<Product> products = Arrays.asList(testProduct);
+        when(productRepository.findByPromotionPromotionId(1)).thenReturn(products);
+
+        // When
+        List<Product> result = graphQLResolver.promotionProducts(testPromotion);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Smartphone", result.get(0).getProductName());
+    }
+
+    @Test
+    void promotionProducts_WhenException_ShouldReturnEmptyList() {
+        // Given
+        when(productRepository.findByPromotionPromotionId(1)).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        List<Product> result = graphQLResolver.promotionProducts(testPromotion);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void categoryPromotions_ShouldReturnPromotionsForCategory() {
+        // Given
+        List<Promotion> promotions = Arrays.asList(testPromotion);
+        when(promotionService.getPromotionsByCategoryEntities(1)).thenReturn(promotions);
+
+        // When
+        List<Promotion> result = graphQLResolver.categoryPromotions(testCategory);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Summer Sale", result.get(0).getPromotionName());
+    }
+
+    @Test
+    void categoryPromotions_WhenException_ShouldReturnEmptyList() {
+        // Given
+        when(promotionService.getPromotionsByCategoryEntities(1)).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        List<Promotion> result = graphQLResolver.categoryPromotions(testCategory);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void categoryProducts_ShouldReturnProductsForCategory() {
+        // Given
+        List<Product> products = Arrays.asList(testProduct);
+        when(productRepository.findByCategoryCategoryId(1)).thenReturn(products);
+
+        // When
+        List<Product> result = graphQLResolver.categoryProducts(testCategory);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Smartphone", result.get(0).getProductName());
+    }
+
+    @Test
+    void categoryProducts_WhenException_ShouldReturnEmptyList() {
+        // Given
+        when(productRepository.findByCategoryCategoryId(1)).thenThrow(new RuntimeException("Database error"));
+
+        // When
+        List<Product> result = graphQLResolver.categoryProducts(testCategory);
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void createPromotion_WhenServiceThrowsException_ShouldThrowRuntimeException() {
+        // Given
+        setupAuthenticatedUser();
+        com.petstore.backend.dto.PromotionDTO promotionDTO = new com.petstore.backend.dto.PromotionDTO();
+        promotionDTO.setPromotionName("Failed Sale");
+        promotionDTO.setDescription("Failed description");
+        promotionDTO.setStartDate(java.time.LocalDateTime.now());
+        promotionDTO.setEndDate(java.time.LocalDateTime.now().plusDays(30));
+        promotionDTO.setDiscountPercentage(java.math.BigDecimal.valueOf(20.0));
+        
+        // Create a category DTO to avoid null pointer
+        com.petstore.backend.dto.CategoryDTO categoryDTO = new com.petstore.backend.dto.CategoryDTO();
+        categoryDTO.setCategoryId(1);
+        promotionDTO.setCategory(categoryDTO);
+        
+        when(promotionService.createPromotion(anyString(), anyString(), 
+                any(java.time.LocalDate.class), any(java.time.LocalDate.class), any(Double.class), 
+                any(Integer.class), any(Integer.class), any(Integer.class)))
+                .thenThrow(new RuntimeException("Database error"));
+
+        // When & Then
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            graphQLResolver.createPromotion(promotionDTO);
+        });
+        assertTrue(exception.getMessage().contains("Failed to create promotion"));
     }
 }

@@ -277,4 +277,122 @@ class UserResponseDTOTest {
         assertEquals("builder@test.com", dto.getEmail());
         assertEquals("BUILDER", dto.getRoleName());
     }
+
+    @Test
+    void testSetNullValues() {
+        // Given
+        userResponseDTO.setUserId(1);
+        userResponseDTO.setUserName("admin");
+        userResponseDTO.setEmail("admin@petstore.com");
+        userResponseDTO.setRoleName("MARKETING_ADMIN");
+
+        // When
+        userResponseDTO.setUserId(null);
+        userResponseDTO.setUserName(null);
+        userResponseDTO.setEmail(null);
+        userResponseDTO.setRoleName(null);
+
+        // Then
+        assertNull(userResponseDTO.getUserId());
+        assertNull(userResponseDTO.getUserName());
+        assertNull(userResponseDTO.getEmail());
+        assertNull(userResponseDTO.getRoleName());
+    }
+
+    @Test
+    void testSetEmptyStrings() {
+        // When
+        userResponseDTO.setUserName("");
+        userResponseDTO.setEmail("");
+        userResponseDTO.setRoleName("");
+
+        // Then
+        assertEquals("", userResponseDTO.getUserName());
+        assertEquals("", userResponseDTO.getEmail());
+        assertEquals("", userResponseDTO.getRoleName());
+    }
+
+    @Test
+    void testConstructorWithNullValues() {
+        // When
+        UserResponseDTO dto = new UserResponseDTO(null, null, null, null);
+
+        // Then
+        assertNotNull(dto);
+        assertNull(dto.getUserId());
+        assertNull(dto.getUserName());
+        assertNull(dto.getEmail());
+        assertNull(dto.getRoleName());
+    }
+
+    @Test
+    void testConstructorWithPartialNullValues() {
+        // When
+        UserResponseDTO dto = new UserResponseDTO(1, null, "test@email.com", null);
+
+        // Then
+        assertNotNull(dto);
+        assertEquals(1, dto.getUserId());
+        assertNull(dto.getUserName());
+        assertEquals("test@email.com", dto.getEmail());
+        assertNull(dto.getRoleName());
+    }
+
+    @Test
+    void testMultipleModifications() {
+        // Given
+        userResponseDTO.setUserId(1);
+        userResponseDTO.setUserName("original");
+        userResponseDTO.setEmail("original@email.com");
+        userResponseDTO.setRoleName("USER");
+
+        // When
+        userResponseDTO.setUserId(2);
+        userResponseDTO.setUserName("modified");
+        userResponseDTO.setEmail("modified@email.com");
+        userResponseDTO.setRoleName("ADMIN");
+
+        // Then
+        assertEquals(2, userResponseDTO.getUserId());
+        assertEquals("modified", userResponseDTO.getUserName());
+        assertEquals("modified@email.com", userResponseDTO.getEmail());
+        assertEquals("ADMIN", userResponseDTO.getRoleName());
+    }
+
+    @Test
+    void testSpecialCharactersInFields() {
+        // Given
+        String specialUserName = "user@#$%";
+        String specialEmail = "test+special@domain.co.uk";
+        String specialRole = "SPECIAL_ROLE_123";
+
+        // When
+        userResponseDTO.setUserName(specialUserName);
+        userResponseDTO.setEmail(specialEmail);
+        userResponseDTO.setRoleName(specialRole);
+
+        // Then
+        assertEquals(specialUserName, userResponseDTO.getUserName());
+        assertEquals(specialEmail, userResponseDTO.getEmail());
+        assertEquals(specialRole, userResponseDTO.getRoleName());
+    }
+
+    @Test
+    void testVeryLongStrings() {
+        // Given
+        String longUserName = "a".repeat(100);
+        String longEmail = "test@" + "domain".repeat(10) + ".com";
+        String longRoleName = "ROLE_" + "ADMIN".repeat(5);
+
+        // When
+        userResponseDTO.setUserName(longUserName);
+        userResponseDTO.setEmail(longEmail);
+        userResponseDTO.setRoleName(longRoleName);
+
+        // Then
+        assertEquals(longUserName, userResponseDTO.getUserName());
+        assertEquals(longEmail, userResponseDTO.getEmail());
+        assertEquals(longRoleName, userResponseDTO.getRoleName());
+        assertEquals(100, userResponseDTO.getUserName().length());
+    }
 }
