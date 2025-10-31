@@ -78,6 +78,7 @@ public class SecurityConfig {
                                          java.util.Arrays.asList(activeProfiles).contains("production");
                     boolean isDevelopment = java.util.Arrays.asList(activeProfiles).contains("dev") ||
                                           java.util.Arrays.asList(activeProfiles).contains("development") ||
+                                          java.util.Arrays.asList(activeProfiles).contains("test") ||
                                           activeProfiles.length == 0; // Por defecto desarrollo
                     
                     // Log del modo detectado
@@ -115,6 +116,11 @@ public class SecurityConfig {
                         authz.requestMatchers(PRODUCTAPIPATTERN).authenticated();
                     }
                     
+                    // Whitelist adicional si está configurada (debe ir ANTES de las reglas específicas)
+                    if (whitelistEndpoints != null && whitelistEndpoints.length > 0) {
+                        authz.requestMatchers(whitelistEndpoints).permitAll();
+                    }
+                    
                     // Promociones siempre requieren autenticación (excepto algunas lecturas públicas)
                     authz.requestMatchers("GET", "/api/promotions", "/api/promotions/status").permitAll(); // Lectura pública
                     authz.requestMatchers("/api/promotions/**").authenticated(); // El resto requiere auth
@@ -125,11 +131,6 @@ public class SecurityConfig {
                     
                     // Perfil de usuario siempre requiere autenticación
                     authz.requestMatchers("/api/auth/me", "/api/auth/verify").authenticated();
-                    
-                    // Whitelist adicional si está configurada
-                    if (whitelistEndpoints != null && whitelistEndpoints.length > 0) {
-                        authz.requestMatchers(whitelistEndpoints).permitAll();
-                    }
                     
                     // Todo lo demás requiere autenticación
                     authz.anyRequest().authenticated();

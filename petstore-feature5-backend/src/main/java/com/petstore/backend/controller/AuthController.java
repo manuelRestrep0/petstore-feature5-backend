@@ -22,10 +22,13 @@ import com.petstore.backend.service.AuthService;
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:5500", "http://localhost:5500"})
 public class AuthController {
 
-    // indicador de estado por defecto
-    String status = "valid";
-    // indicador de mensaje por defecto
-    String message = "message";
+    // Constantes para keys de respuesta (para cumplir con SonarQube)
+    private static final String VALID_KEY = "valid";
+    private static final String MESSAGE_KEY = "message";
+    private static final String STATUS_KEY = "status";
+    private static final String SERVICE_KEY = "service";
+    private static final String TIMESTAMP_KEY = "timestamp";
+    private static final String ENDPOINTS_KEY = "endpoints";
 
     @Autowired
     private AuthService authService;
@@ -37,10 +40,10 @@ public class AuthController {
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
         return ResponseEntity.ok().body(Map.of(
-            "status", "OK",
-            message, "Auth service is running",
-            "timestamp", java.time.LocalDateTime.now(),
-            "endpoints", List.of(
+            SERVICE_KEY, "Authentication Service",
+            STATUS_KEY, "active",
+            TIMESTAMP_KEY, java.time.LocalDateTime.now(),
+            ENDPOINTS_KEY, List.of(
                 "POST /api/auth/login - Login de Marketing Admin",
                 "GET /api/auth/verify - Verificar token",
                 "GET /api/auth/me - Obtener perfil del usuario",
@@ -90,15 +93,15 @@ public class AuthController {
 
             if (isValid) {
                 // Devolver un Map.of() para una respuesta válida
-                return ResponseEntity.ok().body(Map.of(status, true, message, "Token válido"));
+                return ResponseEntity.ok().body(Map.of(VALID_KEY, true, MESSAGE_KEY, "Token válido"));
             } else {
                 // Devolver un Map.of() para una respuesta inválida
-                return ResponseEntity.status(401).body(Map.of(status, false, message, "Token inválido"));
+                return ResponseEntity.status(401).body(Map.of(VALID_KEY, false, MESSAGE_KEY, "Token inválido"));
             }
             
         } catch (Exception e) {
             // Devolver un Map.of() para una respuesta con excepción
-            return ResponseEntity.status(401).body(Map.of(status, false, message, "Token inválido o malformado"));
+            return ResponseEntity.status(401).body(Map.of(VALID_KEY, false, MESSAGE_KEY, "Token inválido o malformado"));
         }
     }
 
@@ -128,6 +131,6 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout() {
         // En JWT stateless, el logout se maneja en el frontend eliminando el token
-        return ResponseEntity.ok().body(Map.of(message, "Logout exitoso"));
+        return ResponseEntity.ok().body(Map.of(MESSAGE_KEY, "Logout exitoso"));
     }
 }

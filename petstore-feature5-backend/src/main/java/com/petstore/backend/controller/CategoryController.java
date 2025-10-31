@@ -136,15 +136,17 @@ public class CategoryController {
      * Información sobre los endpoints disponibles
      */
     @GetMapping("/info")
-    public ResponseEntity<String> getEndpointsInfo() {
-        String info = """
-                Endpoints disponibles para Categories:
-                - GET /api/categories - Todas las categorías
-                - GET /api/categories/{id} - Categoría por ID
-                - POST /api/categories - Crear categoría
-                - PUT /api/categories/{id} - Actualizar categoría
-                - DELETE /api/categories/{id} - Eliminar categoría
-                """;
+    public ResponseEntity<Object> getEndpointsInfo() {
+        var info = java.util.Map.of(
+            "service", "Categories API",
+            "endpoints", java.util.List.of(
+                "GET /api/categories - Todas las categorías",
+                "GET /api/categories/{id} - Categoría por ID",
+                "POST /api/categories - Crear categoría",
+                "PUT /api/categories/{id} - Actualizar categoría",
+                "DELETE /api/categories/{id} - Eliminar categoría"
+            )
+        );
         return ResponseEntity.ok(info);
     }
 
