@@ -1,18 +1,21 @@
 package com.petstore.backend.mapper;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.petstore.backend.dto.CategoryDTO;
 import com.petstore.backend.dto.ProductDTO;
 import com.petstore.backend.entity.Category;
 import com.petstore.backend.entity.Product;
@@ -27,6 +30,7 @@ class ProductMapperTest {
     private Product testProduct;
     private ProductDTO testProductDTO;
     private Category testCategory;
+    private CategoryDTO testCategoryDTO;
 
     @BeforeEach
     void setUp() {
@@ -34,6 +38,12 @@ class ProductMapperTest {
         testCategory.setCategoryId(1);
         testCategory.setCategoryName("Electronics");
         testCategory.setDescription("Electronic devices");
+
+        // Initialize the CategoryDTO
+        testCategoryDTO = new CategoryDTO();
+        testCategoryDTO.setCategoryId(1);
+        testCategoryDTO.setCategoryName("Electronics");
+        testCategoryDTO.setDescription("Electronic devices");
 
         testProduct = new Product();
         testProduct.setProductId(1);
@@ -51,6 +61,7 @@ class ProductMapperTest {
         testProductDTO.setDescription("Gaming laptop");
         testProductDTO.setCreatedAt(LocalDateTime.now());
         testProductDTO.setUpdatedAt(LocalDateTime.now());
+        testProductDTO.setCategory(testCategoryDTO);
     }
 
     @Test
@@ -85,7 +96,7 @@ class ProductMapperTest {
         assertNotNull(result);
         assertEquals(testProductDTO.getProductName(), result.getProductName());
         assertEquals(testProductDTO.getPrice().doubleValue(), result.getBasePrice());
-        assertEquals(testProductDTO.getCategory(), result.getCategory());
+        assertEquals(testProductDTO.getCategory().getCategoryId(), result.getCategory().getCategoryId());
     }
 
     @Test
