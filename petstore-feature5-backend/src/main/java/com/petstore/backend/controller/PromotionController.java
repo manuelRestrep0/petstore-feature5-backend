@@ -2,7 +2,6 @@ package com.petstore.backend.controller;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -22,8 +21,12 @@ import com.petstore.backend.service.PromotionService;
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:5500", "http://localhost:5500"})
 public class PromotionController {
 
-    @Autowired
-    private PromotionService promotionService;
+    
+    private final PromotionService promotionService; // Inyección de dependencia del servicio de promociones
+
+    public PromotionController(PromotionService promotionService) {
+        this.promotionService = promotionService;
+    }
 
     /**
      * Obtiene todas las promociones activas y vigentes

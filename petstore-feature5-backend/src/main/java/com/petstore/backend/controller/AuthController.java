@@ -3,7 +3,6 @@ package com.petstore.backend.controller;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,8 +29,12 @@ public class AuthController {
     private static final String TIMESTAMP_KEY = "timestamp";
     private static final String ENDPOINTS_KEY = "endpoints";
 
-    @Autowired
-    private AuthService authService;
+    
+    private final AuthService authService; // Inyección de dependencia del servicio de autenticación
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
 
     /**
      * Endpoint de prueba para verificar que el servicio funciona

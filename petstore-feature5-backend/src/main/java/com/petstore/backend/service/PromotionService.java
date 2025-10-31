@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,20 +27,23 @@ import com.petstore.backend.repository.UserRepository;
 @Service
 public class PromotionService {
 
-    @Autowired
-    private PromotionRepository promotionRepository;
-    
-    @Autowired
-    private StatusRepository statusRepository;
-    
-    @Autowired
-    private UserRepository userRepository;
-    
-    @Autowired
-    private CategoryRepository categoryRepository;
-    
-    @Autowired
-    private PromotionDeletedRepository promotionDeletedRepository;
+    private final PromotionRepository promotionRepository; // Inyección de dependencia del repositorio de promociones
+    private final StatusRepository statusRepository; // Inyección de dependencia del repositorio de estados
+    private final UserRepository userRepository; // Inyección de dependencia del repositorio de usuarios
+    private final CategoryRepository categoryRepository; // Inyección de dependencia del repositorio de categorías
+    private final PromotionDeletedRepository promotionDeletedRepository; // Inyección de dependencia del repositorio de promociones eliminadas
+
+    public PromotionService(PromotionRepository promotionRepository,
+                            StatusRepository statusRepository,
+                            UserRepository userRepository,
+                            CategoryRepository categoryRepository,
+                            PromotionDeletedRepository promotionDeletedRepository) {
+        this.promotionRepository = promotionRepository;
+        this.statusRepository = statusRepository;
+        this.userRepository = userRepository;
+        this.categoryRepository = categoryRepository;
+        this.promotionDeletedRepository = promotionDeletedRepository;
+    }
 
     /**
      * Obtiene todas las promociones activas y vigentes

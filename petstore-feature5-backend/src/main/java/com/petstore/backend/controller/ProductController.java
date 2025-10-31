@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,8 +24,11 @@ import com.petstore.backend.service.ProductService;
 @CrossOrigin(origins = "*")
 public class ProductController {
 
-    @Autowired
-    private ProductService productService;
+    private final ProductService productService; // Inyección de dependencia del servicio de productos
+
+    public ProductController(ProductService productService) {
+        this.productService = productService;
+    }
 
     /**
      * GET /api/products
