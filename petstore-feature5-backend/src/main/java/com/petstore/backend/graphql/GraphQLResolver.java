@@ -20,6 +20,7 @@ import com.petstore.backend.entity.Category;
 import com.petstore.backend.entity.Product;
 import com.petstore.backend.entity.Promotion;
 import com.petstore.backend.entity.User;
+import com.petstore.backend.exception.GraphQLException;
 import com.petstore.backend.repository.CategoryRepository;
 import com.petstore.backend.repository.ProductRepository;
 import com.petstore.backend.repository.PromotionRepository;
@@ -62,7 +63,7 @@ public class GraphQLResolver {
     private void requireAuthentication() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
-            throw new RuntimeException("Authentication required. Please provide a valid JWT token.");
+            throw new GraphQLException("AUTHENTICATION", "Authentication required", "Please provide a valid JWT token");
         }
     }
     
@@ -248,7 +249,7 @@ public class GraphQLResolver {
     public Promotion createPromotion(@Argument PromotionDTO input) {
         requireAuthentication();
         try {
-            loggerGraphQL.info("Creating promotion with input: {}" , input);
+            loggerGraphQL.info("Creating promotion with input: {}", input);
             
             // Usar el método existente createPromotion del service
             return promotionService.createPromotion(
@@ -262,8 +263,8 @@ public class GraphQLResolver {
                 input.getCategory() != null ? input.getCategory().getCategoryId() : null
             );
         } catch (Exception e) {
-            loggerGraphQL.error("Error creating promotion: {}" , e.getMessage(), e);
-            throw new RuntimeException("Failed to create promotion: {}" + e.getMessage());
+            loggerGraphQL.error("Error creating promotion: {}", e.getMessage(), e);
+            throw new GraphQLException("CREATE", "Failed to create promotion", "Input: " + input + ", Error: " + e.getMessage(), e);
         }
     }
 
@@ -271,7 +272,7 @@ public class GraphQLResolver {
     public Promotion updatePromotion(@Argument Integer id, @Argument PromotionDTO input) {
         requireAuthentication();
         try {
-            loggerGraphQL.info("Updating promotion " , id , " with input: {}" , input);
+            loggerGraphQL.info("Updating promotion {} with input: {}", id, input);
             
             // Usar el método existente updatePromotion del service
             Promotion updated = promotionService.updatePromotion(
@@ -286,12 +287,10 @@ public class GraphQLResolver {
                 input.getCategory() != null ? input.getCategory().getCategoryId() : null
             );
             
-
-            
             return updated;
         } catch (Exception e) {
-            loggerGraphQL.error("Error updating promotion: {}" , e.getMessage(), e);
-            throw new RuntimeException("Failed to update promotion: {}" + e.getMessage());
+            loggerGraphQL.error("Error updating promotion {}: {}", id, e.getMessage(), e);
+            throw new GraphQLException("UPDATE", "Failed to update promotion", "ID: " + id + ", Input: " + input + ", Error: " + e.getMessage(), e);
         }
     }
 
@@ -299,18 +298,25 @@ public class GraphQLResolver {
     public Boolean deletePromotion(@Argument Integer id, @Argument Integer userId) {
         requireAuthentication();
         try {
-            loggerGraphQL.info("Deleting promotion with id: {}" , id , (userId != null ? " by user: {}" + userId : ""));
+            if (userId != null) {
+                loggerGraphQL.info("Deleting promotion with id: {} by user: {}", id, userId);
+            } else {
+                loggerGraphQL.info("Deleting promotion with id: {}", id);
+            }
             
             boolean deleted = promotionService.deletePromotion(id, userId);
             
             if (!deleted) {
-                throw new RuntimeException("Promotion not found with id: {}" + id);
+                throw new GraphQLException("DELETE", "Promotion not found or could not be deleted", "ID: " + id);
             }
             
             return true;
+        } catch (GraphQLException e) {
+            loggerGraphQL.error("GraphQL error deleting promotion {}: {}", id, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            loggerGraphQL.error("Error deleting promotion: {}" , e.getMessage(), e);
-            throw new RuntimeException("Failed to delete promotion: {}" + e.getMessage());
+            loggerGraphQL.error("Unexpected error deleting promotion {}: {}", id, e.getMessage(), e);
+            throw new GraphQLException("DELETE", "Unexpected error during deletion", "ID: " + id + ", Error: " + e.getMessage(), e);
         }
     }
 
@@ -322,8 +328,8 @@ public class GraphQLResolver {
         try {
             return promotionService.getDeletedPromotions();
         } catch (Exception e) {
-            loggerGraphQL.error("Error fetching deleted promotions: {}" , e.getMessage(), e);
-            throw new RuntimeException("Failed to fetch deleted promotions: {}" + e.getMessage());
+            loggerGraphQL.error("Error fetching deleted promotions: {}", e.getMessage(), e);
+            throw new GraphQLException("QUERY", "Failed to fetch deleted promotions", "Error: " + e.getMessage(), e);
         }
     }
 
@@ -335,11 +341,11 @@ public class GraphQLResolver {
             Integer userIdInt = Integer.parseInt(userId);
             return promotionService.getDeletedPromotionsByUser(userIdInt);
         } catch (NumberFormatException e) {
-            loggerGraphQL.error("Invalid userId format: {}" , userId);
-            throw new RuntimeException("Invalid userId format: {}" + userId);
+            loggerGraphQL.error("Invalid userId format: {}", userId);
+            throw new GraphQLException("QUERY", "Invalid userId format", "UserId: " + userId, e);
         } catch (Exception e) {
-            loggerGraphQL.error("Error fetching deleted promotions by user: {}" , e.getMessage(), e);
-            throw new RuntimeException("Failed to fetch deleted promotions by user: {}" + e.getMessage());
+            loggerGraphQL.error("Error fetching deleted promotions by user {}: {}", userId, e.getMessage(), e);
+            throw new GraphQLException("QUERY", "Failed to fetch deleted promotions by user", "UserId: " + userId + ", Error: " + e.getMessage(), e);
         }
     }
 
@@ -349,19 +355,22 @@ public class GraphQLResolver {
     public Boolean restorePromotion(@Argument Integer id, @Argument Integer userId) {
         requireAuthentication();
         try {
-            loggerGraphQL.info("Restoring promotion with id: {}" , id , " by user: {}" , userId);
+            loggerGraphQL.info("Restoring promotion with id: {} by user: {}", id, userId);
             
             // Usar la función de base de datos que maneja automáticamente el proceso
             boolean restored = promotionService.restorePromotionUsingDBFunction(id, userId);
             
             if (!restored) {
-                throw new RuntimeException("Failed to restore promotion with id: {}" + id);
+                throw new GraphQLException("RESTORE", "Promotion not found or could not be restored", "ID: " + id);
             }
             
             return true;
+        } catch (GraphQLException e) {
+            loggerGraphQL.error("GraphQL error restoring promotion {}: {}", id, e.getMessage(), e);
+            throw e;
         } catch (Exception e) {
-            loggerGraphQL.error("Error restoring promotion: {}" , e.getMessage(), e);
-            throw new RuntimeException("Failed to restore promotion: {}" + e.getMessage());
+            loggerGraphQL.error("Unexpected error restoring promotion {}: {}", id, e.getMessage(), e);
+            throw new GraphQLException("RESTORE", "Unexpected error during restoration", "ID: " + id + ", Error: " + e.getMessage(), e);
         }
     }
 

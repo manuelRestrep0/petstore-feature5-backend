@@ -88,9 +88,9 @@ public class SecurityConfig {
                     if (loggerMessage.isInfoEnabled()) {
                         // Log del modo detectado
                         loggerMessage.info("   Security Mode Detection:");
-                        loggerMessage.info("   Active Profiles: " + java.util.Arrays.toString(activeProfiles));
-                        loggerMessage.info("   Is Production: " + isProduction);
-                        loggerMessage.info("   Is Development: " + isDevelopment);
+                        loggerMessage.info("   Active Profiles: {} " , java.util.Arrays.toString(activeProfiles));
+                        loggerMessage.info("   Is Production: {}" , isProduction);
+                        loggerMessage.info("   Is Development: {}" , isDevelopment);
                     }
                     
                     // GraphiQL y GraphQL SIEMPRE PÚBLICOS (tanto dev como prod)
