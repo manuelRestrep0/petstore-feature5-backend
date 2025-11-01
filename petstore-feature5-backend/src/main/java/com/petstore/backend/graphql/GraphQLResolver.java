@@ -73,7 +73,7 @@ public class GraphQLResolver {
 
     @QueryMapping
     public String health() {
-        return "GraphQL API is running! " + java.time.LocalDateTime.now();
+        return "GraphQL API is running!";
     }
 
     /**

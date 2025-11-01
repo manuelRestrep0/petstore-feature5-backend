@@ -988,4 +988,209 @@ class GraphQLResolverTest {
         });
         assertTrue(exception.getMessage().contains("Failed to create promotion"));
     }
+
+    @Test
+    void associateProductsToPromotion_WhenAuthenticated_ShouldAssociateProducts() {
+        // Given
+        setupAuthenticatedUser();
+        when(userRepository.findByEmail("admin@petstore.com")).thenReturn(Optional.of(testUser));
+        when(promotionService.associateProductsToPromotion(1, Arrays.asList(1, 2))).thenReturn(true);
+        when(promotionRepository.findById(1)).thenReturn(Optional.of(testPromotion));
+
+        // When
+        Promotion result = graphQLResolver.associateProductsToPromotion(1, Arrays.asList(1, 2));
+
+        // Then
+        assertNotNull(result);
+        assertEquals("Summer Sale", result.getPromotionName());
+    }
+
+    @Test
+    void associateProductsToPromotion_WhenNotAuthenticated_ShouldThrowException() {
+        // Given
+        SecurityContextHolder.clearContext();
+
+        // When & Then
+        assertThrows(GraphQLException.class, () -> {
+            graphQLResolver.associateProductsToPromotion(1, Arrays.asList(1, 2));
+        });
+    }
+
+    @Test
+    void associateProductsToPromotion_WhenServiceFails_ShouldThrowException() {
+        // Given
+        setupAuthenticatedUser();
+        when(userRepository.findByEmail("admin@petstore.com")).thenReturn(Optional.of(testUser));
+        when(promotionService.associateProductsToPromotion(1, Arrays.asList(1, 2))).thenReturn(false);
+
+        // When & Then
+        assertThrows(GraphQLException.class, () -> {
+            graphQLResolver.associateProductsToPromotion(1, Arrays.asList(1, 2));
+        });
+    }
+
+    @Test
+    void associateProductsToPromotion_WhenPromotionNotFound_ShouldThrowException() {
+        // Given
+        setupAuthenticatedUser();
+        when(userRepository.findByEmail("admin@petstore.com")).thenReturn(Optional.of(testUser));
+        when(promotionService.associateProductsToPromotion(1, Arrays.asList(1, 2))).thenReturn(true);
+        when(promotionRepository.findById(1)).thenReturn(Optional.empty());
+
+        // When & Then
+        assertThrows(GraphQLException.class, () -> {
+            graphQLResolver.associateProductsToPromotion(1, Arrays.asList(1, 2));
+        });
+    }
+
+    @Test
+    void removeProductsFromPromotion_WhenAuthenticated_ShouldRemoveProducts() {
+        // Given
+        setupAuthenticatedUser();
+        when(userRepository.findByEmail("admin@petstore.com")).thenReturn(Optional.of(testUser));
+        when(promotionService.removeProductsFromPromotion(1, Arrays.asList(1, 2))).thenReturn(true);
+        when(promotionRepository.findById(1)).thenReturn(Optional.of(testPromotion));
+
+        // When
+        Promotion result = graphQLResolver.removeProductsFromPromotion(1, Arrays.asList(1, 2));
+
+        // Then
+        assertNotNull(result);
+        assertEquals("Summer Sale", result.getPromotionName());
+    }
+
+    @Test
+    void removeProductsFromPromotion_WhenNotAuthenticated_ShouldThrowException() {
+        // Given
+        SecurityContextHolder.clearContext();
+
+        // When & Then
+        assertThrows(GraphQLException.class, () -> {
+            graphQLResolver.removeProductsFromPromotion(1, Arrays.asList(1, 2));
+        });
+    }
+
+    @Test
+    void removeProductsFromPromotion_WhenServiceFails_ShouldThrowException() {
+        // Given
+        setupAuthenticatedUser();
+        when(userRepository.findByEmail("admin@petstore.com")).thenReturn(Optional.of(testUser));
+        when(promotionService.removeProductsFromPromotion(1, Arrays.asList(1, 2))).thenReturn(false);
+
+        // When & Then
+        assertThrows(GraphQLException.class, () -> {
+            graphQLResolver.removeProductsFromPromotion(1, Arrays.asList(1, 2));
+        });
+    }
+
+    @Test
+    void permanentDeletePromotion_WhenAuthenticated_ShouldDeletePermanently() {
+        // Given
+        setupAuthenticatedUser();
+        when(userRepository.findByEmail("admin@petstore.com")).thenReturn(Optional.of(testUser));
+        when(promotionService.permanentDeletePromotion(1, 1)).thenReturn(true);
+
+        // When
+        Boolean result = graphQLResolver.permanentDeletePromotion(1, 1);
+
+        // Then
+        assertTrue(result);
+    }
+
+    @Test
+    void permanentDeletePromotion_WhenNotAuthenticated_ShouldThrowException() {
+        // Given
+        SecurityContextHolder.clearContext();
+
+        // When & Then
+        assertThrows(GraphQLException.class, () -> {
+            graphQLResolver.permanentDeletePromotion(1, 1);
+        });
+    }
+
+    @Test
+    void permanentDeletePromotion_WhenServiceFails_ShouldThrowException() {
+        // Given
+        setupAuthenticatedUser();
+        when(userRepository.findByEmail("admin@petstore.com")).thenReturn(Optional.of(testUser));
+        when(promotionService.permanentDeletePromotion(1, 1)).thenReturn(false);
+
+        // When & Then
+        assertThrows(GraphQLException.class, () -> {
+            graphQLResolver.permanentDeletePromotion(1, 1);
+        });
+    }
+
+    @Test
+    void updatePromotion_WithValidInput_ShouldUpdatePromotion() {
+        // Given
+        setupAuthenticatedUser();
+        when(userRepository.findByEmail("admin@petstore.com")).thenReturn(Optional.of(testUser));
+        
+        com.petstore.backend.dto.PromotionDTO promotionDTO = new com.petstore.backend.dto.PromotionDTO();
+        promotionDTO.setPromotionName("Updated Sale");
+        promotionDTO.setDescription("Updated description");
+        promotionDTO.setStartDate(LocalDate.now());
+        promotionDTO.setEndDate(LocalDate.now().plusDays(30));
+        promotionDTO.setDiscountPercentage(java.math.BigDecimal.valueOf(25.0));
+        promotionDTO.setCategoryId(1);
+        promotionDTO.setStatusId(1);
+        promotionDTO.setUserId(1);
+
+        when(promotionService.updatePromotion(any(Integer.class), anyString(), anyString(), 
+                any(LocalDate.class), any(LocalDate.class), any(Double.class), 
+                any(Integer.class), any(Integer.class), any(Integer.class)))
+                .thenReturn(testPromotion);
+
+        // When
+        Promotion result = graphQLResolver.updatePromotion(1, promotionDTO);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("Summer Sale", result.getPromotionName());
+    }
+
+    @Test
+    void updatePromotion_WithMissingFields_ShouldThrowException() {
+        // Given
+        setupAuthenticatedUser();
+        when(userRepository.findByEmail("admin@petstore.com")).thenReturn(Optional.of(testUser));
+        
+        com.petstore.backend.dto.PromotionDTO promotionDTO = new com.petstore.backend.dto.PromotionDTO();
+        promotionDTO.setPromotionName("Updated Sale");
+        // Missing categoryId, statusId, userId
+
+        // When & Then
+        assertThrows(GraphQLException.class, () -> {
+            graphQLResolver.updatePromotion(1, promotionDTO);
+        });
+    }
+
+    @Test
+    void health_ShouldReturnHealthyMessage() {
+        // When
+        String result = graphQLResolver.health();
+
+        // Then
+        assertEquals("GraphQL API is running!", result);
+    }
+
+    @Test
+    void promotionProducts_WhenSuccessful_ShouldReturnProducts() {
+        // Given
+        Product product1 = new Product();
+        product1.setProductId(1);
+        product1.setProductName("Product 1");
+        
+        when(productRepository.findByPromotionPromotionId(1))
+                .thenReturn(Arrays.asList(product1));
+
+        // When
+        List<Product> result = graphQLResolver.promotionProducts(testPromotion);
+
+        // Then
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Product 1", result.get(0).getProductName());
+    }
 }

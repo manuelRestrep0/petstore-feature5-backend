@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,8 @@ import com.petstore.backend.repository.UserRepository;
 
 @Service
 public class PromotionService {
+
+    private static final Logger logger = LoggerFactory.getLogger(PromotionService.class);
 
     private final PromotionRepository promotionRepository; // Inyección de dependencia del repositorio de promociones
     private final StatusRepository statusRepository; // Inyección de dependencia del repositorio de estados
@@ -335,7 +339,7 @@ public class PromotionService {
             return true;
             
         } catch (Exception e) {
-            System.err.println("Error restoring promotion: " + e.getMessage());
+            logger.error("Error restoring promotion with ID {}: {}", promotionId, e.getMessage(), e);
             return false;
         }
     }
@@ -357,7 +361,7 @@ public class PromotionService {
             return true;
             
         } catch (Exception e) {
-            System.err.println("Error restoring promotion using DB function: " + e.getMessage());
+            logger.error("Error restoring promotion using DB function with ID {}: {}", promotionId, e.getMessage(), e);
             return false;
         }
     }
@@ -424,8 +428,7 @@ public class PromotionService {
             return true;
             
         } catch (Exception e) {
-            System.err.println("Error deleting promotion: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error deleting promotion with ID {}: {}", promotionId, e.getMessage(), e);
             return false;
         }
     }
@@ -446,16 +449,15 @@ public class PromotionService {
                 // Eliminar permanentemente de la papelera
                 promotionDeletedRepository.delete(promotionDeleted.get());
                 
-                System.out.println("Promotion with ID " + promotionId + " permanently deleted by user " + userId);
+                logger.info("Promotion with ID {} permanently deleted by user {}", promotionId, userId);
                 return true;
             } else {
-                System.err.println("Promotion with ID " + promotionId + " not found in trash");
+                logger.warn("Promotion with ID {} not found in trash", promotionId);
                 return false;
             }
             
         } catch (Exception e) {
-            System.err.println("Error permanently deleting promotion: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error permanently deleting promotion with ID {}: {}", promotionId, e.getMessage(), e);
             return false;
         }
     }
@@ -472,7 +474,7 @@ public class PromotionService {
             // Verificar que la promoción existe
             Optional<Promotion> promotionOpt = promotionRepository.findById(promotionId);
             if (!promotionOpt.isPresent()) {
-                System.err.println("Promotion with ID " + promotionId + " not found");
+                logger.warn("Promotion with ID {} not found for product association", promotionId);
                 return false;
             }
 
@@ -486,17 +488,18 @@ public class PromotionService {
                 });
             }
             
-            System.out.println("Successfully associated products " + productIds + " to promotion " + promotionId);
+            logger.info("Successfully associated products {} to promotion {}", productIds, promotionId);
             return true;
             
         } catch (Exception e) {
-            System.err.println("Error associating products to promotion: " + e.getMessage());
+            logger.error("Error associating products {} to promotion {}: {}", productIds, promotionId, e.getMessage(), e);
             return false;
         }
     }
 
     /**
-     * Remueve productos de una promoción
+     * Remueve productos de una promoción.
+     * 
      * @param promotionId ID de la promoción
      * @param productIds Lista de IDs de productos a remover
      * @return true si se removieron correctamente, false en caso contrario
@@ -507,25 +510,28 @@ public class PromotionService {
             // Verificar que la promoción existe
             Optional<Promotion> promotionOpt = promotionRepository.findById(promotionId);
             if (!promotionOpt.isPresent()) {
-                System.err.println("Promotion with ID " + promotionId + " not found");
+                logger.warn("Promotion with ID {} not found for product removal", promotionId);
                 return false;
             }
             
             // Remover productos de la promoción
             for (Integer productId : productIds) {
                 productRepository.findById(productId).ifPresent(product -> {
-                    if (product.getPromotion() != null && product.getPromotion().getPromotionId().equals(promotionId)) {
+                    if (product.getPromotion() != null 
+                        && product.getPromotion().getPromotionId().equals(promotionId)) {
                         product.setPromotion(null);
                         productRepository.save(product);
                     }
                 });
             }
             
-            System.out.println("Successfully removed products " + productIds + " from promotion " + promotionId);
+            logger.info("Successfully removed products {} from promotion {}", 
+                       productIds, promotionId);
             return true;
             
         } catch (Exception e) {
-            System.err.println("Error removing products from promotion: " + e.getMessage());
+            logger.error("Error removing products {} from promotion {}: {}", 
+                        productIds, promotionId, e.getMessage(), e);
             return false;
         }
     }
