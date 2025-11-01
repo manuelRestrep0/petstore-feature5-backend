@@ -1,22 +1,21 @@
 package com.petstore.backend.graphql;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
-
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.Mock;
+import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -29,6 +28,7 @@ import com.petstore.backend.entity.Promotion;
 import com.petstore.backend.entity.Role;
 import com.petstore.backend.entity.Status;
 import com.petstore.backend.entity.User;
+import com.petstore.backend.exception.GraphQLException;
 import com.petstore.backend.repository.CategoryRepository;
 import com.petstore.backend.repository.ProductRepository;
 import com.petstore.backend.repository.PromotionRepository;
@@ -706,16 +706,17 @@ class GraphQLResolverTest {
     }
 
     @Test
-    void deletePromotion_WhenServiceThrowsException_ShouldThrowRuntimeException() {
+    void deletePromotion_WhenServiceThrowsException_ShouldThrowGraphQLException() {
         // Given
         setupAuthenticatedUser();
         when(promotionService.deletePromotion(1, 1)).thenThrow(new RuntimeException("Database error"));
 
         // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+        GraphQLException exception = assertThrows(GraphQLException.class, () -> {
             graphQLResolver.deletePromotion(1, 1);
         });
-        assertTrue(exception.getMessage().contains("Failed to delete promotion"));
+        assertEquals("DELETE", exception.getOperation());
+        assertTrue(exception.getMessage().contains("Unexpected error during deletion"));
     }
 
     @Test
@@ -843,29 +844,31 @@ class GraphQLResolverTest {
     }
 
     @Test
-    void restorePromotion_WhenPromotionNotFound_ShouldThrowException() {
+    void restorePromotion_WhenPromotionNotFound_ShouldThrowGraphQLException() {
         // Given
         setupAuthenticatedUser();
         when(promotionService.restorePromotionUsingDBFunction(999, 1)).thenReturn(false);
 
         // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+        GraphQLException exception = assertThrows(GraphQLException.class, () -> {
             graphQLResolver.restorePromotion(999, 1);
         });
-        assertTrue(exception.getMessage().contains("Failed to restore promotion"));
+        assertEquals("RESTORE", exception.getOperation());
+        assertTrue(exception.getMessage().contains("Promotion not found or could not be restored"));
     }
 
     @Test
-    void restorePromotion_WhenServiceThrowsException_ShouldThrowRuntimeException() {
+    void restorePromotion_WhenServiceThrowsException_ShouldThrowGraphQLException() {
         // Given
         setupAuthenticatedUser();
         when(promotionService.restorePromotionUsingDBFunction(1, 1)).thenThrow(new RuntimeException("Database error"));
 
         // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+        GraphQLException exception = assertThrows(GraphQLException.class, () -> {
             graphQLResolver.restorePromotion(1, 1);
         });
-        assertTrue(exception.getMessage().contains("Failed to restore promotion"));
+        assertEquals("RESTORE", exception.getOperation());
+        assertTrue(exception.getMessage().contains("Unexpected error during restoration"));
     }
 
     // === SCHEMA MAPPING TESTS ===
