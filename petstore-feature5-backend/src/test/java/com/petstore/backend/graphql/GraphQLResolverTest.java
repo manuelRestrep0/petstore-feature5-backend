@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
@@ -369,9 +370,12 @@ class GraphQLResolverTest {
         com.petstore.backend.dto.PromotionDTO promotionDTO = new com.petstore.backend.dto.PromotionDTO();
         promotionDTO.setPromotionName("Summer Sale");
         promotionDTO.setDescription("Great discount");
-        promotionDTO.setStartDate(java.time.LocalDateTime.now());
-        promotionDTO.setEndDate(java.time.LocalDateTime.now().plusDays(30));
+        promotionDTO.setStartDate(java.time.LocalDate.now());
+        promotionDTO.setEndDate(java.time.LocalDate.now().plusDays(30));
         promotionDTO.setDiscountPercentage(java.math.BigDecimal.valueOf(20.0));
+        promotionDTO.setCategoryId(1);
+        promotionDTO.setStatusId(1);
+        promotionDTO.setUserId(1);
         
         when(promotionService.createPromotion(anyString(), anyString(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(testPromotion);
@@ -610,8 +614,8 @@ class GraphQLResolverTest {
         com.petstore.backend.dto.PromotionDTO promotionDTO = new com.petstore.backend.dto.PromotionDTO();
         promotionDTO.setPromotionName("Updated Summer Sale");
         promotionDTO.setDescription("Updated discount");
-        promotionDTO.setStartDate(java.time.LocalDateTime.now());
-        promotionDTO.setEndDate(java.time.LocalDateTime.now().plusDays(30));
+        promotionDTO.setStartDate(java.time.LocalDate.now());
+        promotionDTO.setEndDate(java.time.LocalDate.now().plusDays(30));
         promotionDTO.setDiscountPercentage(java.math.BigDecimal.valueOf(25.0));
         
         when(promotionService.updatePromotion(any(), anyString(), anyString(), any(), any(), any(), any(), any(), any()))
@@ -645,8 +649,8 @@ class GraphQLResolverTest {
         com.petstore.backend.dto.PromotionDTO promotionDTO = new com.petstore.backend.dto.PromotionDTO();
         promotionDTO.setPromotionName("Updated Sale");
         promotionDTO.setDescription("Updated description");
-        promotionDTO.setStartDate(java.time.LocalDateTime.now());
-        promotionDTO.setEndDate(java.time.LocalDateTime.now().plusDays(30));
+        promotionDTO.setStartDate(java.time.LocalDate.now());
+        promotionDTO.setEndDate(java.time.LocalDate.now().plusDays(30));
         promotionDTO.setDiscountPercentage(java.math.BigDecimal.valueOf(25.0));
         
         // Create a category DTO to avoid null pointer
@@ -891,7 +895,7 @@ class GraphQLResolverTest {
     @Test
     void promotionProducts_WhenException_ShouldReturnEmptyList() {
         // Given
-        when(productRepository.findByPromotionPromotionId(1)).thenThrow(new RuntimeException("Database error"));
+        when(productRepository.findByPromotionPromotionId(anyInt())).thenThrow(new RuntimeException("Database error"));
 
         // When
         List<Product> result = graphQLResolver.promotionProducts(testPromotion);
@@ -964,8 +968,8 @@ class GraphQLResolverTest {
         com.petstore.backend.dto.PromotionDTO promotionDTO = new com.petstore.backend.dto.PromotionDTO();
         promotionDTO.setPromotionName("Failed Sale");
         promotionDTO.setDescription("Failed description");
-        promotionDTO.setStartDate(java.time.LocalDateTime.now());
-        promotionDTO.setEndDate(java.time.LocalDateTime.now().plusDays(30));
+        promotionDTO.setStartDate(java.time.LocalDate.now());
+        promotionDTO.setEndDate(java.time.LocalDate.now().plusDays(30));
         promotionDTO.setDiscountPercentage(java.math.BigDecimal.valueOf(20.0));
         
         // Create a category DTO to avoid null pointer

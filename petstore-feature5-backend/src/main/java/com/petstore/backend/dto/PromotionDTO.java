@@ -1,6 +1,7 @@
 package com.petstore.backend.dto;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class PromotionDTO {
@@ -8,20 +9,25 @@ public class PromotionDTO {
     private String promotionName;
     private String description;
     private BigDecimal discountPercentage;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
+    private LocalDate startDate;
+    private LocalDate endDate;
     private String status;
     private CategoryDTO category;
     private ProductDTO product;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    // Campos adicionales para GraphQL input
+    private Integer categoryId;
+    private Integer statusId;
+    private Integer userId;
 
     // Constructors
     public PromotionDTO() {}
 
     public PromotionDTO(Integer promotionId, String promotionName, String description, 
-                       BigDecimal discountPercentage, LocalDateTime startDate, 
-                       LocalDateTime endDate, String status, CategoryDTO category, 
+                       BigDecimal discountPercentage, LocalDate startDate, 
+                       LocalDate endDate, String status, CategoryDTO category, 
                        ProductDTO product, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.promotionId = promotionId;
         this.promotionName = promotionName;
@@ -69,19 +75,19 @@ public class PromotionDTO {
         this.discountPercentage = discountPercentage;
     }
 
-    public LocalDateTime getStartDate() {
+    public LocalDate getStartDate() {
         return startDate;
     }
 
-    public void setStartDate(LocalDateTime startDate) {
+    public void setStartDate(LocalDate startDate) {
         this.startDate = startDate;
     }
 
-    public LocalDateTime getEndDate() {
+    public LocalDate getEndDate() {
         return endDate;
     }
 
-    public void setEndDate(LocalDateTime endDate) {
+    public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
     }
 
@@ -123,5 +129,30 @@ public class PromotionDTO {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    // Getters y Setters para campos adicionales de GraphQL input
+    public Integer getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(Integer categoryId) {
+        this.categoryId = categoryId;
+    }
+
+    public Integer getStatusId() {
+        return statusId;
+    }
+
+    public void setStatusId(Integer statusId) {
+        this.statusId = statusId;
+    }
+
+    public Integer getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Integer userId) {
+        this.userId = userId;
     }
 }

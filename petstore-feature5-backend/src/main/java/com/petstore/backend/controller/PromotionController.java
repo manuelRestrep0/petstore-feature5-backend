@@ -200,4 +200,97 @@ public class PromotionController {
             ));
         }
     }
+
+    /**
+     * Elimina permanentemente una promoción de la papelera temporal
+     * DELETE /api/promotions/permanent/{id}
+     */
+    @DeleteMapping("/permanent/{id}")
+    public ResponseEntity<Map<String, Object>> permanentDeletePromotion(
+            @PathVariable Integer id,
+            @RequestParam Integer userId) {
+        try {
+            boolean deleted = promotionService.permanentDeletePromotion(id, userId);
+            
+            if (deleted) {
+                return ResponseEntity.ok(java.util.Map.of(
+                    SUCCESS_STATUS, true,
+                    MESSAGE_KEY, "Promoción eliminada permanentemente con éxito"
+                ));
+            } else {
+                return ResponseEntity.badRequest().body(java.util.Map.of(
+                    SUCCESS_STATUS, false,
+                    MESSAGE_KEY, "No se pudo eliminar permanentemente la promoción. Puede que no exista en la papelera"
+                ));
+            }
+            
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(java.util.Map.of(
+                SUCCESS_STATUS, false,
+                MESSAGE_KEY, "Error interno del servidor: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Asocia productos a una promoción
+     * POST /api/promotions/{promotionId}/products
+     */
+    @PostMapping("/{promotionId}/products")
+    public ResponseEntity<Map<String, Object>> associateProductsToPromotion(
+            @PathVariable Integer promotionId,
+            @RequestParam List<Integer> productIds) {
+        try {
+            boolean associated = promotionService.associateProductsToPromotion(promotionId, productIds);
+            
+            if (associated) {
+                return ResponseEntity.ok(java.util.Map.of(
+                    SUCCESS_STATUS, true,
+                    MESSAGE_KEY, "Productos asociados a la promoción con éxito"
+                ));
+            } else {
+                return ResponseEntity.badRequest().body(java.util.Map.of(
+                    SUCCESS_STATUS, false,
+                    MESSAGE_KEY, "No se pudieron asociar los productos. Verifique que la promoción exista"
+                ));
+            }
+            
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(java.util.Map.of(
+                SUCCESS_STATUS, false,
+                MESSAGE_KEY, "Error interno del servidor: " + e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Remueve productos de una promoción
+     * DELETE /api/promotions/{promotionId}/products
+     */
+    @DeleteMapping("/{promotionId}/products")
+    public ResponseEntity<Map<String, Object>> removeProductsFromPromotion(
+            @PathVariable Integer promotionId,
+            @RequestParam List<Integer> productIds) {
+        try {
+            boolean removed = promotionService.removeProductsFromPromotion(promotionId, productIds);
+            
+            if (removed) {
+                return ResponseEntity.ok(java.util.Map.of(
+                    SUCCESS_STATUS, true,
+                    MESSAGE_KEY, "Productos removidos de la promoción con éxito"
+                ));
+            } else {
+                return ResponseEntity.badRequest().body(java.util.Map.of(
+                    SUCCESS_STATUS, false,
+                    MESSAGE_KEY, "No se pudieron remover los productos. Verifique que la promoción exista"
+                ));
+            }
+            
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(java.util.Map.of(
+                SUCCESS_STATUS, false,
+                MESSAGE_KEY, "Error interno del servidor: " + e.getMessage()
+            ));
+        }
+    }
 }

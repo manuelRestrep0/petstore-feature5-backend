@@ -19,6 +19,7 @@ import com.petstore.backend.entity.PromotionDeleted;
 import com.petstore.backend.entity.Status;
 import com.petstore.backend.entity.User;
 import com.petstore.backend.repository.CategoryRepository;
+import com.petstore.backend.repository.ProductRepository;
 import com.petstore.backend.repository.PromotionDeletedRepository;
 import com.petstore.backend.repository.PromotionRepository;
 import com.petstore.backend.repository.StatusRepository;
@@ -32,17 +33,20 @@ public class PromotionService {
     private final UserRepository userRepository; // Inyección de dependencia del repositorio de usuarios
     private final CategoryRepository categoryRepository; // Inyección de dependencia del repositorio de categorías
     private final PromotionDeletedRepository promotionDeletedRepository; // Inyección de dependencia del repositorio de promociones eliminadas
+    private final ProductRepository productRepository; // Inyección de dependencia del repositorio de productos
 
     public PromotionService(PromotionRepository promotionRepository,
                             StatusRepository statusRepository,
                             UserRepository userRepository,
                             CategoryRepository categoryRepository,
-                            PromotionDeletedRepository promotionDeletedRepository) {
+                            PromotionDeletedRepository promotionDeletedRepository,
+                            ProductRepository productRepository) {
         this.promotionRepository = promotionRepository;
         this.statusRepository = statusRepository;
         this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
         this.promotionDeletedRepository = promotionDeletedRepository;
+        this.productRepository = productRepository;
     }
 
     /**
@@ -110,12 +114,12 @@ public class PromotionService {
             dto.setDiscountPercentage(BigDecimal.valueOf(promotion.getDiscountValue()));
         }
         
-        // Convertir LocalDate a LocalDateTime (agregando hora 00:00:00)
+        // Asignar fechas directamente (LocalDate a LocalDate)
         if (promotion.getStartDate() != null) {
-            dto.setStartDate(promotion.getStartDate().atStartOfDay());
+            dto.setStartDate(promotion.getStartDate());
         }
         if (promotion.getEndDate() != null) {
-            dto.setEndDate(promotion.getEndDate().atTime(23, 59, 59));
+            dto.setEndDate(promotion.getEndDate());
         }
         
         // Nota: Las entidades Promotion no tienen createdAt/updatedAt en el esquema actual
@@ -422,6 +426,106 @@ public class PromotionService {
         } catch (Exception e) {
             System.err.println("Error deleting promotion: " + e.getMessage());
             e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Elimina permanentemente una promoción de la papelera temporal
+     * @param promotionId ID de la promoción a eliminar permanentemente
+     * @param userId ID del usuario que realiza la acción
+     * @return true si se eliminó correctamente, false en caso contrario
+     */
+    @Transactional
+    public boolean permanentDeletePromotion(Integer promotionId, Integer userId) {
+        try {
+            // Buscar la promoción en la papelera
+            Optional<PromotionDeleted> promotionDeleted = promotionDeletedRepository.findById(promotionId);
+            
+            if (promotionDeleted.isPresent()) {
+                // Eliminar permanentemente de la papelera
+                promotionDeletedRepository.delete(promotionDeleted.get());
+                
+                System.out.println("Promotion with ID " + promotionId + " permanently deleted by user " + userId);
+                return true;
+            } else {
+                System.err.println("Promotion with ID " + promotionId + " not found in trash");
+                return false;
+            }
+            
+        } catch (Exception e) {
+            System.err.println("Error permanently deleting promotion: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Asocia productos a una promoción
+     * @param promotionId ID de la promoción
+     * @param productIds Lista de IDs de productos a asociar
+     * @return true si se asociaron correctamente, false en caso contrario
+     */
+    @Transactional
+    public boolean associateProductsToPromotion(Integer promotionId, List<Integer> productIds) {
+        try {
+            // Verificar que la promoción existe
+            Optional<Promotion> promotionOpt = promotionRepository.findById(promotionId);
+            if (!promotionOpt.isPresent()) {
+                System.err.println("Promotion with ID " + promotionId + " not found");
+                return false;
+            }
+
+            Promotion promotion = promotionOpt.get();
+            
+            // Asociar productos a la promoción
+            for (Integer productId : productIds) {
+                productRepository.findById(productId).ifPresent(product -> {
+                    product.setPromotion(promotion);
+                    productRepository.save(product);
+                });
+            }
+            
+            System.out.println("Successfully associated products " + productIds + " to promotion " + promotionId);
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error associating products to promotion: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Remueve productos de una promoción
+     * @param promotionId ID de la promoción
+     * @param productIds Lista de IDs de productos a remover
+     * @return true si se removieron correctamente, false en caso contrario
+     */
+    @Transactional
+    public boolean removeProductsFromPromotion(Integer promotionId, List<Integer> productIds) {
+        try {
+            // Verificar que la promoción existe
+            Optional<Promotion> promotionOpt = promotionRepository.findById(promotionId);
+            if (!promotionOpt.isPresent()) {
+                System.err.println("Promotion with ID " + promotionId + " not found");
+                return false;
+            }
+            
+            // Remover productos de la promoción
+            for (Integer productId : productIds) {
+                productRepository.findById(productId).ifPresent(product -> {
+                    if (product.getPromotion() != null && product.getPromotion().getPromotionId().equals(promotionId)) {
+                        product.setPromotion(null);
+                        productRepository.save(product);
+                    }
+                });
+            }
+            
+            System.out.println("Successfully removed products " + productIds + " from promotion " + promotionId);
+            return true;
+            
+        } catch (Exception e) {
+            System.err.println("Error removing products from promotion: " + e.getMessage());
             return false;
         }
     }

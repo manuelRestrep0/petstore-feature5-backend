@@ -251,16 +251,27 @@ public class GraphQLResolver {
         try {
             loggerGraphQL.info("Creating promotion with input: {}", input);
             
+            // Validar campos requeridos
+            if (input.getCategoryId() == null) {
+                throw new GraphQLException("CREATE", "CategoryId is required", "CategoryId cannot be null");
+            }
+            if (input.getStatusId() == null) {
+                throw new GraphQLException("CREATE", "StatusId is required", "StatusId cannot be null");
+            }
+            if (input.getUserId() == null) {
+                throw new GraphQLException("CREATE", "UserId is required", "UserId cannot be null");
+            }
+            
             // Usar el método existente createPromotion del service
             return promotionService.createPromotion(
                 input.getPromotionName(),
                 input.getDescription(),
-                input.getStartDate().toLocalDate(),
-                input.getEndDate().toLocalDate(),
+                input.getStartDate(),
+                input.getEndDate(),
                 input.getDiscountPercentage().doubleValue(),
-                1, // statusId por defecto
-                1, // userId por defecto  
-                input.getCategory() != null ? input.getCategory().getCategoryId() : null
+                input.getStatusId(),
+                input.getUserId(),
+                input.getCategoryId()
             );
         } catch (Exception e) {
             loggerGraphQL.error("Error creating promotion: {}", e.getMessage(), e);
@@ -279,12 +290,13 @@ public class GraphQLResolver {
                 id,
                 input.getPromotionName(),
                 input.getDescription(),
-                input.getStartDate().toLocalDate(),
-                input.getEndDate().toLocalDate(),
+                input.getStartDate(),
+                input.getEndDate(),
                 input.getDiscountPercentage().doubleValue(),
-                1, // statusId por defecto
-                1, // userId por defecto
-                input.getCategory() != null ? input.getCategory().getCategoryId() : null
+                input.getStatusId() != null ? input.getStatusId() : 1,
+                input.getUserId() != null ? input.getUserId() : 1,
+                input.getCategoryId() != null ? input.getCategoryId() : 
+                    (input.getCategory() != null ? input.getCategory().getCategoryId() : null)
             );
             
             return updated;
@@ -317,6 +329,72 @@ public class GraphQLResolver {
         } catch (Exception e) {
             loggerGraphQL.error("Unexpected error deleting promotion {}: {}", id, e.getMessage(), e);
             throw new GraphQLException("DELETE", "Unexpected error during deletion", "ID: " + id + ", Error: " + e.getMessage(), e);
+        }
+    }
+
+    // ================== MUTACIONES DE ASOCIACIÓN PRODUCTO-PROMOCIÓN ==================
+
+    @MutationMapping
+    public Promotion associateProductsToPromotion(@Argument Integer promotionId, @Argument List<Integer> productIds) {
+        requireAuthentication();
+        try {
+            loggerGraphQL.info("Associating products {} to promotion {}", productIds, promotionId);
+            
+            // Obtener la promoción
+            Promotion promotion = promotionRepository.findById(promotionId).orElse(null);
+            if (promotion == null) {
+                throw new GraphQLException("ASSOCIATE", "Promotion not found", "ID: " + promotionId);
+            }
+            
+            // Asociar productos a la promoción
+            for (Integer productId : productIds) {
+                Product product = productRepository.findById(productId).orElse(null);
+                if (product != null) {
+                    product.setPromotion(promotion);
+                    productRepository.save(product);
+                }
+            }
+            
+            // Retornar la promoción actualizada
+            return promotionRepository.findById(promotionId).orElse(null);
+        } catch (GraphQLException e) {
+            loggerGraphQL.error("GraphQL error associating products to promotion {}: {}", promotionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            loggerGraphQL.error("Unexpected error associating products to promotion {}: {}", promotionId, e.getMessage(), e);
+            throw new GraphQLException("ASSOCIATE", "Unexpected error during association", "PromotionID: " + promotionId + ", ProductIDs: " + productIds + ", Error: " + e.getMessage(), e);
+        }
+    }
+
+    @MutationMapping
+    public Promotion removeProductsFromPromotion(@Argument Integer promotionId, @Argument List<Integer> productIds) {
+        requireAuthentication();
+        try {
+            loggerGraphQL.info("Removing products {} from promotion {}", productIds, promotionId);
+            
+            // Verificar que la promoción existe
+            Promotion promotion = promotionRepository.findById(promotionId).orElse(null);
+            if (promotion == null) {
+                throw new GraphQLException("REMOVE_ASSOCIATION", "Promotion not found", "ID: " + promotionId);
+            }
+            
+            // Remover asociación de productos
+            for (Integer productId : productIds) {
+                Product product = productRepository.findById(productId).orElse(null);
+                if (product != null && product.getPromotion() != null && product.getPromotion().getPromotionId().equals(promotionId)) {
+                    product.setPromotion(null);
+                    productRepository.save(product);
+                }
+            }
+            
+            // Retornar la promoción actualizada
+            return promotionRepository.findById(promotionId).orElse(null);
+        } catch (GraphQLException e) {
+            loggerGraphQL.error("GraphQL error removing products from promotion {}: {}", promotionId, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            loggerGraphQL.error("Unexpected error removing products from promotion {}: {}", promotionId, e.getMessage(), e);
+            throw new GraphQLException("REMOVE_ASSOCIATION", "Unexpected error during removal", "PromotionID: " + promotionId + ", ProductIDs: " + productIds + ", Error: " + e.getMessage(), e);
         }
     }
 
@@ -371,6 +449,28 @@ public class GraphQLResolver {
         } catch (Exception e) {
             loggerGraphQL.error("Unexpected error restoring promotion {}: {}", id, e.getMessage(), e);
             throw new GraphQLException("RESTORE", "Unexpected error during restoration", "ID: " + id + ", Error: " + e.getMessage(), e);
+        }
+    }
+
+    @MutationMapping
+    public Boolean permanentDeletePromotion(@Argument Integer id, @Argument Integer userId) {
+        requireAuthentication();
+        try {
+            loggerGraphQL.info("Permanently deleting promotion with id: {} by user: {}", id, userId);
+            
+            boolean deleted = promotionService.permanentDeletePromotion(id, userId);
+            
+            if (!deleted) {
+                throw new GraphQLException("PERMANENT_DELETE", "Promotion not found in trash or could not be deleted", "ID: " + id);
+            }
+            
+            return true;
+        } catch (GraphQLException e) {
+            loggerGraphQL.error("GraphQL error permanently deleting promotion {}: {}", id, e.getMessage(), e);
+            throw e;
+        } catch (Exception e) {
+            loggerGraphQL.error("Unexpected error permanently deleting promotion {}: {}", id, e.getMessage(), e);
+            throw new GraphQLException("PERMANENT_DELETE", "Unexpected error during permanent deletion", "ID: " + id + ", Error: " + e.getMessage(), e);
         }
     }
 
