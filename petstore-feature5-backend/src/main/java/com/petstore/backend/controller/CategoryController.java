@@ -2,7 +2,6 @@ package com.petstore.backend.controller;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -51,7 +50,7 @@ public class CategoryController {
             List<Category> categories = categoryService.findAll();
             List<CategoryDTO> categoryDTOs = categories.stream()
                     .map(this::convertToDTO)
-                    .collect(Collectors.toList());
+                    .toList();
             
             return ResponseEntity.ok(categoryDTOs);
         } catch (Exception e) {

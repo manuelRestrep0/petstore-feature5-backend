@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
+
 @Component
 public class ProfileAwareRunner implements CommandLineRunner {
 
@@ -20,13 +21,14 @@ public class ProfileAwareRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        String[] activeProfiles = environment.getActiveProfiles();
-        String[] defaultProfiles = environment.getDefaultProfiles();
-        
-        // Debug logging
+    String[] activeProfiles = environment.getActiveProfiles();
+    String[] defaultProfiles = environment.getDefaultProfiles();
+    
+    // Implementación de verificación condicional para satisfacer el analizador estricto:
+    if (loggerMessage.isInfoEnabled()) {
+        // Todas estas líneas están ahora dentro del bloque condicional
         loggerMessage.info("DEBUG - Active profiles: {}", java.util.Arrays.toString(activeProfiles));
         loggerMessage.info("DEBUG - Default profiles: {}", java.util.Arrays.toString(defaultProfiles));
-
         loggerMessage.info("============================================");
         loggerMessage.info("PETSTORE BACKEND - PERFIL DE SEGURIDAD");
         loggerMessage.info("============================================");
@@ -66,5 +68,6 @@ public class ProfileAwareRunner implements CommandLineRunner {
         loggerMessage.info("   1. POST /api/auth/login");
         loggerMessage.info("   2. Usar token en header: Authorization: Bearer <token>");
         loggerMessage.info(" ============================================");
+        }
     }
 }

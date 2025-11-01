@@ -1,6 +1,7 @@
 package com.petstore.backend.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -21,7 +22,9 @@ import com.petstore.backend.service.PromotionService;
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:5500", "http://localhost:5500"})
 public class PromotionController {
 
-    
+    private static final String MESSAGE_KEY = "message"; // Constante para key de mensaje en respuestas
+    private static final String SUCCESS_STATUS = "success"; // Constante para estado de éxito
+
     private final PromotionService promotionService; // Inyección de dependencia del servicio de promociones
 
     public PromotionController(PromotionService promotionService) {
@@ -89,10 +92,10 @@ public class PromotionController {
      * GET /api/promotions/status
      */
     @GetMapping("/status")
-    public ResponseEntity<?> getStatus() {
+    public ResponseEntity<Map<String, Object>> getStatus() {
         return ResponseEntity.ok().body(java.util.Map.of(
             "status", "OK",
-            "message", "Promotion service is running",
+            MESSAGE_KEY, "Promotion service is running",
             "timestamp", java.time.LocalDateTime.now(),
             "endpoints", java.util.List.of(
                 "GET /api/promotions - Promociones activas y vigentes",
@@ -112,7 +115,7 @@ public class PromotionController {
      * DELETE /api/promotions/{id}?userId={userId}
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deletePromotion(
+    public ResponseEntity<Map<String, Object>> deletePromotion(
             @PathVariable Integer id,
             @RequestParam(required = false) Integer userId) {
         
@@ -121,8 +124,8 @@ public class PromotionController {
             
             if (deleted) {
                 return ResponseEntity.ok().body(java.util.Map.of(
-                    "success", true,
-                    "message", "Promoción eliminada exitosamente y movida a papelera temporal (30 días)",
+                    SUCCESS_STATUS, true,
+                    MESSAGE_KEY, "Promoción eliminada exitosamente y movida a papelera temporal (30 días)",
                     "promotionId", id
                 ));
             } else {
@@ -131,8 +134,8 @@ public class PromotionController {
             
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(java.util.Map.of(
-                "success", false,
-                "message", "Error interno del servidor: " + e.getMessage()
+                SUCCESS_STATUS, false,
+                MESSAGE_KEY, "Error interno del servidor: " + e.getMessage()
             ));
         }
     }
@@ -170,7 +173,7 @@ public class PromotionController {
      * POST /api/promotions/{id}/restore?userId={userId}
      */
     @PostMapping("/{id}/restore")
-    public ResponseEntity<?> restorePromotion(
+    public ResponseEntity<Map<String, Object>> restorePromotion(
             @PathVariable Integer id,
             @RequestParam Integer userId) {
         
@@ -179,21 +182,21 @@ public class PromotionController {
             
             if (restored) {
                 return ResponseEntity.ok().body(java.util.Map.of(
-                    "success", true,
-                    "message", "Promoción restaurada exitosamente desde la papelera temporal",
+                    SUCCESS_STATUS, true,
+                    MESSAGE_KEY, "Promoción restaurada exitosamente desde la papelera temporal",
                     "promotionId", id
                 ));
             } else {
                 return ResponseEntity.badRequest().body(java.util.Map.of(
-                    "success", false,
-                    "message", "No se pudo restaurar la promoción. Puede que no exista o hayan pasado más de 30 días"
+                    SUCCESS_STATUS, false,
+                    MESSAGE_KEY, "No se pudo restaurar la promoción. Puede que no exista o hayan pasado más de 30 días"
                 ));
             }
             
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(java.util.Map.of(
-                "success", false,
-                "message", "Error interno del servidor: " + e.getMessage()
+                SUCCESS_STATUS, false,
+                MESSAGE_KEY, "Error interno del servidor: " + e.getMessage()
             ));
         }
     }

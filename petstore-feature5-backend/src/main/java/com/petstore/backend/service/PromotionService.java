@@ -347,7 +347,7 @@ public class PromotionService {
                 promotionRepository.setActor(userId);
             }
             
-            // 2. Llamar a la función de BD que hace todo automáticamente
+            // 2. Llamar a la función de BD que hace automáticamente el proceso de restauración
             promotionRepository.restorePromotionUsingFunction(promotionId);
             
             return true;
@@ -410,7 +410,7 @@ public class PromotionService {
                 promotionRepository.setActor(deletedByUserId);
             }
             
-            // 2. ELIMINAR la promoción - Los triggers se encargan de TODO automáticamente:
+            // 2. eliminar la promoción - Los triggers se encargan del proceso
             //    - trg_promotions_soft_delete: Desvincula productos, mueve a promotions_deleted
             //    - trg_promotions_audit: Registra la auditoría
             //    - trg_promotions_deleted_guard: Impide duplicados en promotions_deleted
