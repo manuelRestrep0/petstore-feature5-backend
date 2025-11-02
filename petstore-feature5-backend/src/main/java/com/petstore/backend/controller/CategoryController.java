@@ -19,6 +19,16 @@ import com.petstore.backend.dto.CategoryDTO;
 import com.petstore.backend.entity.Category;
 import com.petstore.backend.service.CategoryService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
  * Controlador REST para gestión de categorías
  * Endpoints disponibles:
@@ -31,6 +41,7 @@ import com.petstore.backend.service.CategoryService;
 @RestController
 @RequestMapping("/api/categories")
 @CrossOrigin(origins = "*")
+@Tag(name = "Categorías", description = "API para gestión de categorías de productos")
 public class CategoryController {
 
     
@@ -40,10 +51,25 @@ public class CategoryController {
         this.categoryService = categoryService;
     }
 
-    /**
-     * GET /api/categories
-     * Obtiene todas las categorías disponibles
-     */
+    @Operation(
+            summary = "Obtener todas las categorías",
+            description = "Retorna una lista completa de todas las categorías de productos disponibles"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Lista de categorías obtenida exitosamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = CategoryDTO.class))
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
     @GetMapping
     public ResponseEntity<List<CategoryDTO>> getAllCategories() {
         try {
@@ -58,12 +84,34 @@ public class CategoryController {
         }
     }
 
-    /**
-     * GET /api/categories/{id}
-     * Obtiene una categoría específica por ID
-     */
+    @Operation(
+            summary = "Obtener categoría por ID",
+            description = "Retorna una categoría específica utilizando su identificador único"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Categoría encontrada exitosamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = CategoryDTO.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404", 
+                    description = "Categoría no encontrada",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryDTO> getCategoryById(@PathVariable Integer id) {
+    public ResponseEntity<CategoryDTO> getCategoryById(
+            @Parameter(description = "ID de la categoría", example = "1", required = true)
+            @PathVariable Integer id) {
         try {
             Optional<Category> categoryOpt = categoryService.findById(id);
             
@@ -78,12 +126,35 @@ public class CategoryController {
         }
     }
 
-    /**
-     * POST /api/categories
-     * Crea una nueva categoría
-     */
+    @Operation(
+            summary = "Crear nueva categoría",
+            description = "Crea una nueva categoría de productos en el sistema"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "201", 
+                    description = "Categoría creada exitosamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = CategoryDTO.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400", 
+                    description = "Datos de entrada inválidos",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping
-    public ResponseEntity<CategoryDTO> createCategory(@RequestBody CategoryDTO categoryDTO) {
+    public ResponseEntity<CategoryDTO> createCategory(
+            @Parameter(description = "Datos de la categoría a crear", required = true)
+            @RequestBody CategoryDTO categoryDTO) {
         try {
             Category category = convertToEntity(categoryDTO);
             
@@ -96,12 +167,42 @@ public class CategoryController {
         }
     }
 
-    /**
-     * PUT /api/categories/{id}
-     * Actualiza una categoría existente
-     */
+    @Operation(
+            summary = "Actualizar categoría existente",
+            description = "Actualiza los datos de una categoría existente utilizando su ID"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Categoría actualizada exitosamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = CategoryDTO.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404", 
+                    description = "Categoría no encontrada",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "400", 
+                    description = "Datos de entrada inválidos",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{id}")
-    public ResponseEntity<CategoryDTO> updateCategory(@PathVariable Integer id, @RequestBody CategoryDTO categoryDTO) {
+    public ResponseEntity<CategoryDTO> updateCategory(
+            @Parameter(description = "ID de la categoría a actualizar", example = "1", required = true)
+            @PathVariable Integer id, 
+            @Parameter(description = "Nuevos datos de la categoría", required = true)
+            @RequestBody CategoryDTO categoryDTO) {
         try {
             Optional<Category> existingCategoryOpt = categoryService.findById(id);
             
@@ -124,12 +225,32 @@ public class CategoryController {
         }
     }
 
-    /**
-     * DELETE /api/categories/{id}
-     * Elimina una categoría por ID
-     */
+    @Operation(
+            summary = "Eliminar categoría",
+            description = "Elimina permanentemente una categoría del sistema utilizando su ID"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "204", 
+                    description = "Categoría eliminada exitosamente",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "404", 
+                    description = "Categoría no encontrada",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCategory(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteCategory(
+            @Parameter(description = "ID de la categoría a eliminar", example = "1", required = true)
+            @PathVariable Integer id) {
         try {
             if (categoryService.existsById(id)) {
                 categoryService.deleteById(id);
@@ -142,10 +263,17 @@ public class CategoryController {
         }
     }
 
-    /**
-     * GET /api/categories/info
-     * Información sobre los endpoints disponibles
-     */
+    @Operation(
+            summary = "Información de la API de categorías",
+            description = "Retorna información sobre todos los endpoints disponibles en la API de categorías"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Información obtenida exitosamente",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
     @GetMapping("/info")
     public ResponseEntity<Object> getEndpointsInfo() {
         var info = java.util.Map.of(

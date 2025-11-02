@@ -17,9 +17,20 @@ import com.petstore.backend.dto.PromotionDTO;
 import com.petstore.backend.dto.PromotionDeletedDTO;
 import com.petstore.backend.service.PromotionService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/promotions")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:5500", "http://localhost:5500"})
+@CrossOrigin(origins = "*")
+@Tag(name = "Promociones", description = "API para gestión de promociones de la tienda")
 public class PromotionController {
 
     private static final String MESSAGE_KEY = "message"; // Constante para key de mensaje en respuestas
@@ -35,6 +46,16 @@ public class PromotionController {
      * Obtiene todas las promociones activas y vigentes
      * GET /api/promotions
      */
+    @Operation(
+        summary = "Obtener promociones activas",
+        description = "Obtiene todas las promociones activas y vigentes disponibles para los clientes"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lista de promociones activas obtenida exitosamente",
+                content = @Content(mediaType = "application/json", 
+                          schema = @Schema(implementation = PromotionDTO.class))),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
     @GetMapping
     public ResponseEntity<List<PromotionDTO>> getAllActivePromotions() {
         try {
@@ -49,6 +70,15 @@ public class PromotionController {
      * Obtiene todas las promociones (para administración)
      * GET /api/promotions/all
      */
+    @Operation(
+        summary = "Obtener todas las promociones",
+        description = "Obtiene todas las promociones del sistema (para administradores)"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Lista completa de promociones obtenida exitosamente"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/all")
     public ResponseEntity<List<PromotionDTO>> getAllPromotions() {
         try {
@@ -63,8 +93,19 @@ public class PromotionController {
      * Obtiene promociones por categoría
      * GET /api/promotions/category/{categoryId}
      */
+    @Operation(
+        summary = "Obtener promociones por categoría",
+        description = "Obtiene todas las promociones activas de una categoría específica"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Promociones de la categoría obtenidas exitosamente"),
+        @ApiResponse(responseCode = "400", description = "ID de categoría inválido"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<List<PromotionDTO>> getPromotionsByCategory(@PathVariable Integer categoryId) {
+    public ResponseEntity<List<PromotionDTO>> getPromotionsByCategory(
+            @Parameter(description = "ID de la categoría", required = true, example = "1")
+            @PathVariable Integer categoryId) {
         try {
             List<PromotionDTO> promotions = promotionService.getPromotionsByCategory(categoryId);
             return ResponseEntity.ok(promotions);
@@ -73,10 +114,25 @@ public class PromotionController {
         }
     }
 
-    /**
-     * Obtiene promociones vigentes para hoy
-     * GET /api/promotions/valid
-     */
+    @Operation(
+            summary = "Obtener promociones vigentes",
+            description = "Retorna todas las promociones que están activas y vigentes en la fecha actual"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Promociones vigentes obtenidas exitosamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = PromotionDTO.class))
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
     @GetMapping("/valid")
     public ResponseEntity<List<PromotionDTO>> getValidPromotions() {
         try {
@@ -87,10 +143,17 @@ public class PromotionController {
         }
     }
 
-    /**
-     * Endpoint de estado para verificar que el servicio funciona
-     * GET /api/promotions/status
-     */
+    @Operation(
+            summary = "Estado del servicio de promociones",
+            description = "Retorna información sobre el estado del servicio y endpoints disponibles"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Estado del servicio obtenido exitosamente",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
         return ResponseEntity.ok().body(java.util.Map.of(
@@ -110,13 +173,32 @@ public class PromotionController {
         ));
     }
     
-    /**
-     * Elimina una promoción y la guarda en papelera temporal
-     * DELETE /api/promotions/{id}?userId={userId}
-     */
+    @Operation(
+            summary = "Eliminar promoción (papelera temporal)",
+            description = "Elimina una promoción y la envía a la papelera temporal por 30 días antes de eliminación permanente"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Promoción eliminada exitosamente",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "404", 
+                    description = "Promoción no encontrada",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, Object>> deletePromotion(
+            @Parameter(description = "ID de la promoción a eliminar", example = "1", required = true)
             @PathVariable Integer id,
+            @Parameter(description = "ID del usuario que realiza la eliminación", example = "1")
             @RequestParam(required = false) Integer userId) {
         
         try {
@@ -140,10 +222,25 @@ public class PromotionController {
         }
     }
     
-    /**
-     * Obtiene promociones en la papelera temporal
-     * GET /api/promotions/trash
-     */
+    @Operation(
+            summary = "Ver papelera temporal de promociones",
+            description = "Retorna todas las promociones eliminadas que están en la papelera temporal (30 días)"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Papelera temporal obtenida exitosamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = PromotionDeletedDTO.class))
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
     @GetMapping("/trash")
     public ResponseEntity<List<PromotionDeletedDTO>> getDeletedPromotions() {
         try {
@@ -154,12 +251,29 @@ public class PromotionController {
         }
     }
     
-    /**
-     * Obtiene promociones eliminadas por un usuario específico
-     * GET /api/promotions/trash/user/{userId}
-     */
+    @Operation(
+            summary = "Ver papelera temporal por usuario",
+            description = "Retorna las promociones eliminadas por un usuario específico que están en la papelera temporal"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Promociones eliminadas por el usuario obtenidas exitosamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = PromotionDeletedDTO.class))
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
     @GetMapping("/trash/user/{userId}")
-    public ResponseEntity<List<PromotionDeletedDTO>> getDeletedPromotionsByUser(@PathVariable Integer userId) {
+    public ResponseEntity<List<PromotionDeletedDTO>> getDeletedPromotionsByUser(
+            @Parameter(description = "ID del usuario", example = "1", required = true)
+            @PathVariable Integer userId) {
         try {
             List<PromotionDeletedDTO> deletedPromotions = promotionService.getDeletedPromotionsByUser(userId);
             return ResponseEntity.ok(deletedPromotions);
@@ -168,13 +282,32 @@ public class PromotionController {
         }
     }
     
-    /**
-     * Restaura una promoción de la papelera temporal
-     * POST /api/promotions/{id}/restore?userId={userId}
-     */
+    @Operation(
+            summary = "Restaurar promoción desde papelera",
+            description = "Restaura una promoción eliminada desde la papelera temporal y la vuelve a activar"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Promoción restaurada exitosamente",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "404", 
+                    description = "Promoción no encontrada en la papelera",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
     @PostMapping("/{id}/restore")
     public ResponseEntity<Map<String, Object>> restorePromotion(
+            @Parameter(description = "ID de la promoción a restaurar", example = "1", required = true)
             @PathVariable Integer id,
+            @Parameter(description = "ID del usuario que realiza la restauración", example = "1", required = true)
             @RequestParam Integer userId) {
         
         try {

@@ -14,11 +14,22 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.petstore.backend.dto.LoginRequest;
 import com.petstore.backend.dto.LoginResponse;
+import com.petstore.backend.dto.UserResponseDTO;
 import com.petstore.backend.service.AuthService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:5500", "http://localhost:5500"})
+@CrossOrigin(origins = "*")
+@Tag(name = "Autenticación", description = "API para autenticación y autorización de usuarios")
 public class AuthController {
 
     // Constantes para keys de respuesta (para cumplir con SonarQube)
@@ -36,10 +47,17 @@ public class AuthController {
         this.authService = authService;
     }
 
-    /**
-     * Endpoint de prueba para verificar que el servicio funciona
-     * GET /api/auth/status
-     */
+    @Operation(
+            summary = "Estado del servicio de autenticación",
+            description = "Endpoint de health check que retorna el estado del servicio y lista de endpoints disponibles"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Estado del servicio obtenido exitosamente",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getStatus() {
         return ResponseEntity.ok().body(Map.of(
@@ -60,8 +78,21 @@ public class AuthController {
      * Endpoint para el login de Marketing Admin
      * POST /api/auth/login
      */
+    @Operation(
+        summary = "Iniciar sesión",
+        description = "Autentica a un usuario Marketing Admin y devuelve un token JWT"
+    )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Login exitoso",
+                content = @Content(mediaType = "application/json", 
+                          schema = @Schema(implementation = LoginResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Credenciales inválidas"),
+        @ApiResponse(responseCode = "500", description = "Error interno del servidor")
+    })
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<LoginResponse> login(
+            @Parameter(description = "Credenciales de login", required = true)
+            @RequestBody LoginRequest loginRequest) {
         try {
             // Validar que el usuario sea Marketing Admin
             LoginResponse response = authService.authenticateMarketingAdmin(
@@ -81,12 +112,32 @@ public class AuthController {
         }
     }
 
-    /**
-     * Endpoint para verificar si el token es válido
-     * GET /api/auth/verify
-     */
+    @Operation(
+            summary = "Verificar token JWT",
+            description = "Verifica si el token JWT proporcionado es válido y no ha expirado"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Token verificado exitosamente",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "401", 
+                    description = "Token inválido o expirado",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/verify")
-    public ResponseEntity<Map<String, Object>> verifyToken(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<Map<String, Object>> verifyToken(
+            @Parameter(description = "Token JWT en formato 'Bearer {token}'", required = true)
+            @RequestHeader("Authorization") String authHeader) {
         try {
             // Extraer el token del header Authorization
             String token = authHeader.substring(7); // Remover "Bearer "
@@ -108,12 +159,35 @@ public class AuthController {
         }
     }
 
-    /**
-     * Endpoint para obtener información del usuario actual
-     * GET /api/auth/me
-     */
+    @Operation(
+            summary = "Obtener perfil del usuario actual",
+            description = "Retorna la información del usuario autenticado basada en el token JWT"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Información del usuario obtenida exitosamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = UserResponseDTO.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401", 
+                    description = "Token inválido o usuario no encontrado",
+                    content = @Content
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
+    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/me")
-    public ResponseEntity<Map<String, Object>> getCurrentUser(@RequestHeader("Authorization") String authHeader) {
+    public ResponseEntity<Map<String, Object>> getCurrentUser(
+            @Parameter(description = "Token JWT en formato 'Bearer {token}'", required = true)
+            @RequestHeader("Authorization") String authHeader) {
         try {
             String token = authHeader.substring(7); // Remover "Bearer "
             
@@ -127,10 +201,17 @@ public class AuthController {
         }
     }
 
-    /**
-     * Endpoint para logout (opcional, principalmente para limpiar el token del frontend)
-     * POST /api/auth/logout
-     */
+    @Operation(
+            summary = "Cerrar sesión",
+            description = "Endpoint para logout. En JWT stateless, el token se elimina en el frontend"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Logout exitoso",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
     @PostMapping("/logout")
     public ResponseEntity<Map<String, String>> logout() {
         // En JWT stateless, el logout se maneja en el frontend eliminando el token

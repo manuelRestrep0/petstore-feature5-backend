@@ -97,6 +97,11 @@ public class SecurityConfig {
                     authz.requestMatchers("/graphiql", "/graphiql/**").permitAll();
                     authz.requestMatchers("/graphql", "/graphql/**").permitAll();
                     
+                    // Swagger/OpenAPI endpoints públicos
+                    authz.requestMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll();
+                    authz.requestMatchers("/api-docs/**", "/api-docs").permitAll();
+                    authz.requestMatchers("/v3/api-docs/**", "/v3/api-docs").permitAll();
+                    
                     if (isDevelopment) {
                         // MODO DESARROLLO: Más permisivo
                         authz.requestMatchers("/h2-console/**").permitAll(); // H2 Console para dev
