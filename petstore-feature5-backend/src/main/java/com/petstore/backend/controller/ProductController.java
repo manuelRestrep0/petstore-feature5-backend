@@ -20,17 +20,17 @@ import com.petstore.backend.service.ProductService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 
 @Tag(name = "Productos", description = "Gestión de productos de la tienda de mascotas")
 @RestController
 @RequestMapping("/api/products")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8080", "https://petstore-feature5-backend.onrender.com", "https://fluffy-deals-hub.vercel.app"})
 public class ProductController {
 
     private final ProductService productService; // Inyección de dependencia del servicio de productos
@@ -216,6 +216,40 @@ public class ProductController {
         }
     }
 
+    @Operation(
+            summary = "Obtener productos por promoción",
+            description = "Retorna todos los productos que están asociados a una promoción específica"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", 
+                    description = "Productos de la promoción obtenidos exitosamente",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(schema = @Schema(implementation = ProductDTO.class))
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "500", 
+                    description = "Error interno del servidor",
+                    content = @Content
+            )
+    })
+    @GetMapping("/promotion/{promotionId}")
+    public ResponseEntity<List<ProductDTO>> getProductsByPromotion(
+            @Parameter(description = "ID de la promoción", example = "1", required = true)
+            @PathVariable Integer promotionId) {
+        try {
+            List<Product> products = productService.findByPromotionId(promotionId);
+            List<ProductDTO> productDTOs = products.stream()
+                    .map(this::convertToDTO)
+                    .toList();
+            return ResponseEntity.ok(productDTOs);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     /**
      * Convierte una entidad Product a ProductDTO
      */
@@ -227,6 +261,8 @@ public class ProductController {
         dto.setDescription(product.getProductName());
         // Convertir Double a BigDecimal
         dto.setPrice(BigDecimal.valueOf(product.getBasePrice()));
+        // Asignar SKU desde la entidad Product
+        dto.setSku(String.valueOf(product.getSku()));
         // La entidad Product no tiene stock, usar un valor por defecto o null
         dto.setStock(null);
         // La entidad Product no tiene imageUrl, se puede dejar null
@@ -239,6 +275,8 @@ public class ProductController {
             CategoryDTO categoryDTO = new CategoryDTO();
             categoryDTO.setCategoryId(product.getCategory().getCategoryId());
             categoryDTO.setCategoryName(product.getCategory().getCategoryName());
+            // Asignar descripción de la categoría
+            categoryDTO.setDescription(product.getCategory().getDescription());
             dto.setCategory(categoryDTO);
         }
         

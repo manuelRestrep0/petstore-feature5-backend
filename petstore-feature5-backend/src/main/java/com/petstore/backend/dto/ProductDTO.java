@@ -20,6 +20,9 @@ public class ProductDTO {
     @Schema(description = "Precio del producto", example = "25.99")
     private BigDecimal price;
     
+    @Schema(description = "Código SKU del producto", example = "SKU12345")
+    private String sku;
+    
     @Schema(description = "Cantidad en stock", example = "15")
     private Integer stock;
     
@@ -42,13 +45,14 @@ public class ProductDTO {
     public ProductDTO() {}
 
     public ProductDTO(Integer productId, String productName, String description, 
-                     BigDecimal price, Integer stock, String imageUrl, 
+                     BigDecimal price, String sku, Integer stock, String imageUrl, 
                      CategoryDTO category, String status, LocalDateTime createdAt, 
                      LocalDateTime updatedAt) {
         this.productId = productId;
         this.productName = productName;
         this.description = description;
         this.price = price;
+        this.sku = sku;
         this.stock = stock;
         this.imageUrl = imageUrl;
         this.category = category;
@@ -88,6 +92,14 @@ public class ProductDTO {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public String getSku() {
+        return sku;
+    }
+
+    public void setSku(String sku) {
+        this.sku = sku;
     }
 
     public Integer getStock() {

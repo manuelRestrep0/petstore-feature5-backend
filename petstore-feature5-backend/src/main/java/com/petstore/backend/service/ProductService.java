@@ -70,6 +70,13 @@ public class ProductService {
     }
 
     /**
+     * Encuentra productos por ID de promoción
+     */
+    public List<Product> findByPromotionId(Integer promotionId) {
+        return productRepository.findByPromotionPromotionId(promotionId);
+    }
+
+    /**
      * Verifica si existe un producto por ID
      */
     public boolean existsById(Integer id) {
