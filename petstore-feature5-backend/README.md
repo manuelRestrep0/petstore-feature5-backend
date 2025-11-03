@@ -1,6 +1,6 @@
 # 🛍️ Petstore Feature 5 Backend
 
-Sistema completo de promociones para petstore con autenticación JWT, API REST y GraphQL.
+Sistema completo de promociones para petstore con autenticación JWT, API REST y GraphQL, incluyendo **sistema de eliminación con papelera temporal**.
 
 ## 📋 Tabla de Contenidos
 
@@ -10,31 +10,32 @@ Sistema completo de promociones para petstore con autenticación JWT, API REST y
 - [Instalación](#-instalación)
 - [Configuración](#️-configuración)
 - [Ejecución](#-ejecución)
-- [API Endpoints](#-api-endpoints)
-- [GraphQL](#-graphql)
+- [API REST Endpoints](#-api-rest-endpoints)
+- [GraphQL API](#-graphql-api)
 - [Base de Datos](#️-base-de-datos)
-- [Archivos de Prueba](#-archivos-de-prueba)
+- [Sistema de Papelera Temporal](#-sistema-de-papelera-temporal)
 - [Estructura del Proyecto](#-estructura-del-proyecto)
 - [Troubleshooting](#-troubleshooting)
 
-## � **Novedades Recientes**
+## 🆕 **Características Principales**
 
-### ✅ **GraphQL con JWT Real** 
-- **Antes**: GraphQL generaba tokens falsos (`fake-jwt-token`)
-- **Ahora**: GraphQL usa `AuthService` y genera **JWT reales** idénticos a REST
+### ✅ **Sistema de Eliminación con Papelera Temporal** 
+- **Eliminación segura**: Las promociones se mueven a papelera temporal (no eliminación directa)
+- **Papelera temporal**: Promociones eliminadas se conservan 30 días con purga automática
+- **Auditoría completa**: Registro automático de usuario, fecha de eliminación y restauración
+- **Restauración**: Posibilidad de recuperar promociones via REST y GraphQL
+- **Estado INACTIVE**: Las promociones eliminadas cambian a estado INACTIVE automáticamente
 
-### ✅ **GraphiQL Público en Producción**
-- **Antes**: GraphiQL restringido en producción  
-- **Ahora**: GraphiQL **público en desarrollo Y producción** para facilitar pruebas
+### ✅ **API Dual: REST + GraphQL** 
+- **REST API**: Endpoints completos para todas las operaciones CRUD
+- **GraphQL API**: Queries y mutations con JWT real (no tokens falsos)
+- **Autenticación**: JWT compartido entre REST y GraphQL
+- **Paridad funcional**: Ambas APIs tienen las mismas capacidades
 
-### ✅ **Base de Datos Optimizada para Producción**
-- **HikariCP**: Pool de conexiones optimizado para Neon Database
-- **JPA**: Configuraciones de batch y transacciones mejoradas
-- **Estabilidad**: Sin errores de conexión JDBC en producción
-
-### ✅ **Seguridad Mejorada**
-- **Consultas Públicas**: Categorías, productos, promociones sin JWT
-- **Consultas Protegidas**: `currentUser` y mutations requieren JWT real
+### ✅ **Base de Datos Optimizada**
+- **PostgreSQL**: Con triggers, funciones y auditoría automática
+- **HikariCP**: Pool de conexiones optimizado para producción
+- **Triggers avanzados**: Manejo automático de eliminación/restauración
 - **Whitelist Actualizada**: Endpoints públicos configurados correctamente
 
 ---
@@ -119,6 +120,12 @@ GET  /api/promotions/category/{id}     → PromotionDTO[]
 GET  /api/promotions/valid             → PromotionDTO[]
 GET  /api/promotions/status            → Map<String,Object>
 
+🗑️ ELIMINACIÓN Y PAPELERA:
+DELETE /api/promotions/{id}?userId=           → JSON (success, message)
+GET    /api/promotions/trash                  → PromotionDeletedDTO[]
+GET    /api/promotions/trash/user/{userId}    → PromotionDeletedDTO[]
+POST   /api/promotions/{id}/restore?userId=   → JSON (success, message)
+
 📁 CATEGORIES:
 GET  /api/categories           → CategoryDTO[]
 GET  /api/categories/{id}      → CategoryDTO
@@ -138,9 +145,10 @@ query {
 ```
 
 **✨ Características:**
-- **21 endpoints REST** implementados con MapStruct
+- **25 endpoints REST** implementados con MapStruct
+- **21 operaciones GraphQL** (16 queries + 5 mutations) + 3 schema mappings
 - **DTOs seguros** sin información sensible  
-- **GraphQL** para consultas flexibles y relacionales
+- **API Dual** para máxima flexibilidad REST + GraphQL
 
 ## �🚀 Instalación
 
@@ -360,17 +368,17 @@ public class ProductService {
 ### Generación Automática:
 MapStruct genera **automáticamente** las implementaciones en `/target/generated-sources/annotations/`
 
-## 🌐 API Endpoints
+## 🌐 API REST Endpoints
 
-> **📋 Endpoints Verificados**: Esta documentación muestra únicamente los endpoints que están **realmente implementados** en el código.
+> **📋 Endpoints Verificados**: Esta documentación muestra únicamente los endpoints que están **realmente implementados** y funcionales en el código.
 
-### 🔐 Autenticación
+### 🔐 Autenticación - `/api/auth/*` (5 endpoints)
 
 | Método | Endpoint | Descripción | Auth | Response |
 |--------|----------|-------------|------|----------|
 | GET | `/api/auth/status` | Estado del servicio de autenticación | No | `Map<String,Object>` |
-| POST | `/api/auth/login` | Login de usuario | No | `LoginResponse` |
-| GET | `/api/auth/verify` | Verificar validez del token JWT | Sí | `JSON (valid: boolean)` |
+| POST | `/api/auth/login` | Login de usuario (Marketing Admin) | No | `LoginResponse` |
+| GET | `/api/auth/verify` | Verificar validez del token JWT | JWT | `JSON (valid: boolean)` |
 | GET | `/api/auth/me` | Perfil del usuario autenticado | Sí | `UserInfo` |
 | POST | `/api/auth/logout` | Cerrar sesión del usuario | No | `JSON (message)` |
 
@@ -394,7 +402,36 @@ MapStruct genera **automáticamente** las implementaciones en `/target/generated
 | GET | `/api/promotions/valid` | Promociones vigentes para hoy | No | `PromotionDTO[]` |
 | GET | `/api/promotions/status` | Estado del servicio | No | `Map<String,Object>` |
 
-### 📁 Categorías
+### �️ Eliminación con Papelera Temporal
+
+> **🆕 Nueva funcionalidad**: Sistema de eliminación con confirmación doble y papelera temporal de 30 días.
+
+| Método | Endpoint | Descripción | Auth | Response |
+|--------|----------|-------------|------|----------|
+| DELETE | `/api/promotions/{id}?userId={userId}&confirmed={boolean}` | Eliminar promoción (confirmación doble) | No | `DeletionConfirmationDTO` |
+| GET | `/api/promotions/trash` | Ver papelera temporal | No | `PromotionDeletedDTO[]` |
+| GET | `/api/promotions/trash/user/{userId}` | Papelera por usuario | No | `PromotionDeletedDTO[]` |
+| POST | `/api/promotions/{id}/restore?userId={userId}` | Restaurar promoción | No | `DeletionConfirmationDTO` |
+
+#### 🔄 Flujo de Eliminación
+
+1. **Primera llamada** (`confirmed=false`): Sistema muestra advertencia
+   ```
+   ⚠️ "¿Seguro que deseas eliminar esta promoción? 
+       Esta acción moverá el registro a la papelera temporal (30 días)."
+   ```
+
+2. **Segunda llamada** (`confirmed=true`): Confirma eliminación
+   - Promoción cambia a estado `INACTIVE` (ID: 4)
+   - Se mueve a tabla `promotions_deleted`
+   - Se elimina de tabla principal `promotions`
+   - Se registra auditoría (usuario, fecha, hora)
+
+3. **Papelera temporal**: 30 días de retención
+   - ✅ **Restaurable**: Menos de 30 días
+   - ❌ **Purgable**: Más de 30 días (automático por triggers DB)
+
+### �📁 Categorías
 
 | Método | Endpoint | Descripción | Auth | Response |
 |--------|----------|-------------|------|----------|
@@ -407,7 +444,7 @@ MapStruct genera **automáticamente** las implementaciones en `/target/generated
 
 ### 📊 Resumen de Endpoints
 
-- **Total**: 21 endpoints REST implementados
+- **Total**: 25 endpoints REST implementados
 - **Autenticación**: 5 endpoints (`/api/auth/*`)
 - **Productos**: 5 endpoints (`/api/products/*`)  
 - **Promociones**: 5 endpoints (`/api/promotions/*`)
@@ -514,19 +551,57 @@ curl -X DELETE http://localhost:8080/api/categories/1
 curl -X GET http://localhost:8080/api/categories/info
 ```
 
-## 🔗 GraphQL
+## 🔗 GraphQL API
 
-### Endpoint GraphQL
+> **Endpoint**: `http://localhost:8080/graphql`  
+> **GraphiQL**: `http://localhost:8080/graphiql` (público en desarrollo Y producción)
 
-- **URL**: `http://localhost:8080/graphql`
-- **GraphiQL**: `http://localhost:8080/graphiql` (público en desarrollo Y producción)
+### � Inventario GraphQL Completo
+
+#### 🔍 **Queries Disponibles (16 queries)**
+
+| Query | Parámetros | Descripción | Auth | Retorna |
+|-------|------------|-------------|------|---------|
+| `health` | - | Health check del sistema | No | `String!` |
+| `currentUser` | - | Usuario autenticado actual | JWT | `User` |
+| `promotions` | - | Todas las promociones | No | `[Promotion!]!` |
+| `promotionsActive` | - | Solo promociones ACTIVE | No | `[Promotion!]!` |
+| `promotionsExpired` | - | Solo promociones EXPIRED | No | `[Promotion!]!` |
+| `promotionsScheduled` | - | Solo promociones SCHEDULE | No | `[Promotion!]!` |
+| `promotionsByStatus` | `statusName: String!` | Promociones por estado específico | No | `[Promotion!]!` |
+| `promotionsByCategory` | `categoryId: ID!` | Promociones por categoría | No | `[Promotion!]!` |
+| `promotion` | `id: ID!` | Promoción específica por ID | No | `Promotion` |
+| `deletedPromotions` | - | **Papelera temporal (30 días)** | JWT | `[PromotionDeleted!]!` |
+| `deletedPromotionsByUser` | `userId: ID!` | **Papelera por usuario** | JWT | `[PromotionDeleted!]!` |
+| `categories` | - | Todas las categorías | No | `[Category!]!` |
+| `category` | `id: ID!` | Categoría específica por ID | No | `Category` |
+| `products` | - | Todos los productos | No | `[Product!]!` |
+| `productsByCategory` | `categoryId: ID!` | Productos por categoría | No | `[Product!]!` |
+| `product` | `id: ID!` | Producto específico por ID | No | `Product` |
+
+#### ⚡ **Mutations Disponibles (5 mutations)**
+
+| Mutation | Parámetros | Descripción | Auth | Retorna |
+|----------|------------|-------------|------|---------|
+| `login` | `email: String!, password: String!` | **Login con JWT real** | No | `GraphQLLoginResponse!` |
+| `createPromotion` | `input: PromotionInput!` | Crear nueva promoción | JWT | `Promotion!` |
+| `updatePromotion` | `id: ID!, input: PromotionInput!` | Actualizar promoción existente | JWT | `Promotion!` |
+| `deletePromotion` | `id: ID!, userId: ID` | **Eliminar (papelera temporal)** | JWT | `Boolean!` |
+| `restorePromotion` | `id: ID!, userId: ID!` | **Restaurar desde papelera** | JWT | `Boolean!` |
+
+### 🛡️ **Política de Seguridad GraphQL**
+
+- **Públicas**: 14 queries + 1 mutation (`login`) = **15 operaciones públicas**
+- **Protegidas**: 2 queries (`currentUser`, `deletedPromotions`, `deletedPromotionsByUser`) + 4 mutations = **6 operaciones con JWT**
+- **Papelera temporal**: 2 queries + 2 mutations = **4 operaciones específicas de trash bin**
+- **Schema Mappings**: 3 resolvers adicionales para relaciones (promotionProducts, categoryPromotions, categoryProducts)
 
 ### 🔐 **Autenticación JWT Real**
 
 **✅ NOVEDAD**: GraphQL ahora genera **JWT tokens reales** usando el mismo `AuthService` que REST:
 
 ```graphql
-mutation {
+mutation LoginReal {
   login(email: "alice@example.com", password: "password123") {
     success
     token      # ← JWT real generado por AuthService
@@ -540,28 +615,228 @@ mutation {
 }
 ```
 
-### 🌍 **Acceso Público a GraphiQL**
+### 📝 **Ejemplos de Uso GraphQL**
 
-**✅ CONFIGURACIÓN ACTUALIZADA**: GraphiQL es ahora **público en ambos ambientes**:
+#### 🔍 **Consultas Básicas**
 
-- **Desarrollo**: `http://localhost:8080/graphiql` ✅ Público
-- **Producción**: `http://localhost:8080/graphiql` ✅ Público  
+```graphql
+# =============================
+# CONSULTAS PÚBLICAS
+# =============================
 
-Esto permite pruebas fáciles sin configuración adicional.
+query ConsultasPublicas {
+  # Health check
+  health
+  
+  # Todas las promociones con detalles completos
+  promotions {
+    promotionId
+    promotionName
+    description
+    startDate
+    endDate
+    discountValue
+    status {
+      statusId
+      statusName
+    }
+    category {
+      categoryId
+      categoryName
+      description
+    }
+    user {
+      userId
+      userName
+    }
+  }
+  
+  # Solo promociones activas
+  promotionsActive {
+    promotionId
+    promotionName
+    discountValue
+    status { statusName }
+  }
+  
+  # Promociones por estado específico
+  promotionsByStatus(statusName: "ACTIVE") {
+    promotionId
+    promotionName
+    status { statusName }
+  }
+  
+  # Promociones por categoría
+  promotionsByCategory(categoryId: "1") {
+    promotionId
+    promotionName
+    category { categoryName }
+  }
+  
+  # Todas las categorías
+  categories {
+    categoryId
+    categoryName
+    description
+  }
+  
+  # Todos los productos
+  products {
+    productId
+    productName
+    basePrice
+    sku
+    category {
+      categoryName
+    }
+  }
+}
+```
 
-### 🛡️ **Política de Seguridad GraphQL**
+#### 🗑️ **Sistema de Papelera Temporal**
 
-| Query/Mutation | Autenticación | Descripción |
-|----------------|---------------|-------------|
-| `health` | ❌ Público | Health check |
-| `categories` | ❌ Público | Consultar categorías |
-| `products` | ❌ Público | Consultar productos |
-| `promotions` | ❌ Público | Consultar promociones |
-| `currentUser` | ✅ JWT Requerido | Info del usuario autenticado |
-| `login` | ❌ Público | Generar JWT token |
-| `createPromotion` | ✅ JWT Requerido | Crear promoción |
-| `updatePromotion` | ✅ JWT Requerido | Actualizar promoción |
-| `deletePromotion` | ✅ JWT Requerido | Eliminar promoción |
+```graphql
+# =============================
+# PAPELERA TEMPORAL (Requiere JWT)
+# =============================
+
+# 1. Eliminar promoción (mover a papelera)
+mutation EliminarPromocion {
+  deletePromotion(id: "6", userId: "1")
+}
+
+# 2. Ver papelera temporal
+query VerPapelera {
+  deletedPromotions {
+    promotionId
+    promotionName
+    description
+    status {
+      statusId
+      statusName
+    }
+    deletedAt
+    daysUntilPurge
+    deletedBy {
+      userId
+      userName
+    }
+    category {
+      categoryName
+    }
+  }
+}
+
+# 3. Papelera filtrada por usuario
+query PapeleraPorUsuario {
+  deletedPromotionsByUser(userId: "1") {
+    promotionId
+    promotionName
+    deletedAt
+    daysUntilPurge
+  }
+}
+
+# 4. Restaurar promoción
+mutation RestaurarPromocion {
+  restorePromotion(id: "6", userId: "1")
+}
+```
+
+#### ⚡ **Mutations Avanzadas** 
+
+```graphql
+# =============================
+# OPERACIONES ADMINISTRATIVAS (Requiere JWT)
+# =============================
+
+# Crear nueva promoción
+mutation CrearPromocion {
+  createPromotion(input: {
+    promotionName: "Black Friday 2024"
+    description: "Descuentos especiales de Black Friday"
+    startDate: "2024-11-29"
+    endDate: "2024-11-30"
+    discountPercentage: 50.0
+    statusId: "1"
+    userId: "1"
+    categoryId: "1"
+  }) {
+    promotionId
+    promotionName
+    status { statusName }
+  }
+}
+
+# Actualizar promoción existente
+mutation ActualizarPromocion {
+  updatePromotion(id: "1", input: {
+    promotionName: "Black Friday 2024 - Extendido"
+    description: "Descuentos extendidos hasta diciembre"
+    startDate: "2024-11-29"
+    endDate: "2024-12-02"
+    discountPercentage: 60.0
+    statusId: "1"
+    categoryId: "1"
+  }) {
+    promotionId
+    promotionName
+    discountValue
+    status { statusName }
+  }
+}
+```
+
+### 🚀 **Consultas Relacionales Avanzadas**
+
+```graphql
+# Consulta completa con todas las relaciones
+query ConsultaCompleta {
+  promotions {
+    promotionId
+    promotionName
+    discountValue
+    
+    # Relación con Status
+    status {
+      statusId
+      statusName
+    }
+    
+    # Relación con User
+    user {
+      userId
+      userName
+      email
+      role {
+        roleId
+        roleName
+      }
+    }
+    
+    # Relación con Category
+    category {
+      categoryId
+      categoryName
+      description
+      
+      # Productos de esta categoría
+      products {
+        productId
+        productName
+        basePrice
+      }
+    }
+    
+    # Productos asociados a esta promoción
+    products {
+      productId
+      productName
+      basePrice
+      sku
+    }
+  }
+}
 
 ### 🌟 **Capacidades Avanzadas de GraphQL**
 
@@ -601,11 +876,46 @@ query ConsultasBasicas {
     discountValue
   }
   
-  # Solo promociones activas
+  # Solo promociones activas (status: ACTIVE)
   promotionsActive {
     promotionId
     promotionName
     discountValue
+    status {
+      statusName
+    }
+  }
+  
+  # Solo promociones expiradas (status: EXPIRED)
+  promotionsExpired {
+    promotionId
+    promotionName
+    discountValue
+    status {
+      statusName
+    }
+  }
+  
+  # Solo promociones programadas (status: SCHEDULE)
+  promotionsScheduled {
+    promotionId
+    promotionName
+    discountValue
+    startDate
+    endDate
+    status {
+      statusName
+    }
+  }
+  
+  # Promociones por estado específico
+  promotionsByStatus(statusName: "ACTIVE") {
+    promotionId
+    promotionName
+    discountValue
+    status {
+      statusName
+    }
   }
   
   # Promociones por categoría
@@ -1013,23 +1323,89 @@ mutation LoginReal {
 
 ### 🎯 **Casos de Uso Prácticos**
 
-#### **Dashboard de Administración**
+#### **🆕 Consultas por Estado de Promociones**
 ```graphql
-query Dashboard {
-  promotions {
+# Solo promociones activas
+query PromocionesActivas {
+  promotionsActive {
+    promotionId
+    promotionName
+    discountValue
+    startDate
+    endDate
+    status { statusName }
+    category { categoryName }
+  }
+}
+
+# Solo promociones expiradas
+query PromocionesExpiradas {
+  promotionsExpired {
+    promotionId
+    promotionName
+    discountValue
+    endDate
+    status { statusName }
+    category { categoryName }
+  }
+}
+
+# Solo promociones programadas (futuras)
+query PromocionesProgramadas {
+  promotionsScheduled {
+    promotionId
+    promotionName
+    discountValue
+    startDate
+    endDate
+    status { statusName }
+    category { categoryName }
+  }
+}
+
+# Consulta flexible por cualquier estado
+query PromocionePorEstado($estado: String!) {
+  promotionsByStatus(statusName: $estado) {
     promotionId
     promotionName
     discountValue
     status { statusName }
-    category { categoryName }
-    products { productName }
+  }
+}
+```
+
+#### **Dashboard de Administración Completo**
+```graphql
+query DashboardCompleto {
+  # Promociones activas
+  activas: promotionsActive {
+    promotionId
+    promotionName
+    discountValue
+    status { statusName }
   }
   
+  # Promociones expiradas
+  expiradas: promotionsExpired {
+    promotionId
+    promotionName
+    endDate
+    status { statusName }
+  }
+  
+  # Promociones programadas
+  programadas: promotionsScheduled {
+    promotionId
+    promotionName
+    startDate
+    status { statusName }
+  }
+  
+  # Categorías
   categories {
     categoryId
     categoryName
     products { productId }
-    promotions { promotionId }
   }
 }
 ```
@@ -1096,7 +1472,25 @@ Para queries que requieren autenticación, usar JWT real obtenido del login:
 2. Usar el token en header `Authorization: Bearer <token>`
 3. Acceder a queries protegidas como `currentUser`
 
-**Ejemplo con PowerShell**:
+**🆕 Ejemplos PowerShell - Consultas por Estado**:
+```powershell
+# Promociones activas (sin JWT requerido)
+Invoke-WebRequest -Uri "http://localhost:8080/graphql" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"query":"{ promotionsActive { promotionId promotionName discountValue status { statusName } } }"}'
+
+# Promociones expiradas
+Invoke-WebRequest -Uri "http://localhost:8080/graphql" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"query":"{ promotionsExpired { promotionId promotionName endDate status { statusName } } }"}'
+
+# Promociones programadas
+Invoke-WebRequest -Uri "http://localhost:8080/graphql" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"query":"{ promotionsScheduled { promotionId promotionName startDate status { statusName } } }"}'
+
+# Promociones por estado específico
+Invoke-WebRequest -Uri "http://localhost:8080/graphql" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"query":"{ promotionsByStatus(statusName: \"ACTIVE\") { promotionId promotionName status { statusName } } }"}'
+
+# Dashboard completo con todos los estados
+Invoke-WebRequest -Uri "http://localhost:8080/graphql" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"query":"{ activas: promotionsActive { promotionId promotionName } expiradas: promotionsExpired { promotionId promotionName } programadas: promotionsScheduled { promotionId promotionName } }"}'
+```
+
+**Ejemplo con PowerShell - JWT para consultas protegidas**:
 ```powershell
 # 1. Login para obtener JWT
 $loginResponse = Invoke-WebRequest -Uri "http://localhost:8080/graphql" -Method POST -Headers @{"Content-Type"="application/json"} -Body '{"query":"mutation { login(email: \"alice@example.com\", password: \"password123\") { success token } }"}'
@@ -1104,6 +1498,167 @@ $loginResponse = Invoke-WebRequest -Uri "http://localhost:8080/graphql" -Method 
 # 2. Usar JWT en consulta protegida  
 Invoke-WebRequest -Uri "http://localhost:8080/graphql" -Method POST -Headers @{"Content-Type"="application/json"; "Authorization"="Bearer <TOKEN_AQUI>"} -Body '{"query":"{ currentUser { userId userName email } }"}'
 ```
+
+### 🗑️ **Ejemplos del Sistema de Eliminación**
+
+**Primera llamada - Mostrar advertencia:**
+```powershell
+# Intentar eliminar promoción (primera llamada)
+Invoke-WebRequest -Uri "http://localhost:8080/api/promotions/1?userId=1&confirmed=false" -Method DELETE -Headers @{"Content-Type"="application/json"}
+
+# Respuesta esperada:
+# {
+#   "success": false,
+#   "warningMessage": "¿Seguro que deseas eliminar esta promoción? Esta acción moverá el registro a la papelera temporal (30 días).",
+#   "promotionId": 1,
+#   "promotionName": "Black Friday 2024",
+#   "actionRequired": "Para confirmar la eliminación, realiza una segunda llamada con el parámetro 'confirmed=true'",
+#   "daysInTrash": 30
+# }
+```
+
+**Segunda llamada - Confirmar eliminación:**
+```powershell
+# Confirmar eliminación (segunda llamada)
+Invoke-WebRequest -Uri "http://localhost:8080/api/promotions/1?userId=1&confirmed=true" -Method DELETE -Headers @{"Content-Type"="application/json"}
+
+# Respuesta esperada:
+# {
+#   "success": true,
+#   "message": "Promoción eliminada exitosamente y movida a la papelera temporal.",
+#   "promotionId": 1,
+#   "promotionName": "Black Friday 2024",
+#   "daysInTrash": 30
+# }
+```
+
+**Ver papelera temporal:**
+```powershell
+# Ver todas las promociones en papelera
+Invoke-WebRequest -Uri "http://localhost:8080/api/promotions/trash" -Method GET -Headers @{"Content-Type"="application/json"}
+
+# Ver papelera por usuario específico
+Invoke-WebRequest -Uri "http://localhost:8080/api/promotions/trash/user/1" -Method GET -Headers @{"Content-Type"="application/json"}
+```
+
+**Restaurar promoción:**
+```powershell
+# Restaurar promoción desde papelera
+Invoke-WebRequest -Uri "http://localhost:8080/api/promotions/1/restore?userId=1" -Method POST -Headers @{"Content-Type"="application/json"}
+
+# Respuesta esperada:
+# {
+#   "success": true,
+#   "message": "Promoción restaurada exitosamente desde la papelera temporal.",
+#   "promotionId": 2,
+#   "promotionName": "Black Friday 2024"
+# }
+```
+
+### 📊 **Resumen GraphQL**
+
+- **Total Operaciones**: **21 operaciones GraphQL** (15 queries + 6 mutations)
+- **Endpoint único**: `/graphql` para todas las operaciones
+- **GraphiQL público**: Disponible en desarrollo y producción
+- **JWT compartido**: Mismo sistema de autenticación que REST
+- **Consultas relacionales**: Navegación completa por grafo de datos
+- **Papelera temporal**: Sistema completo de eliminación/restauración
+
+## 🗑️ Sistema de Papelera Temporal
+
+> **🆕 Funcionalidad principal**: Sistema de eliminación con confirmación doble y papelera temporal de 30 días.
+
+### ⚙️ **Flujo de Eliminación Completo**
+
+1. **Eliminación soft**: Promoción cambia status a `INACTIVE` (ID: 4)
+2. **Movimiento a papelera**: Se crea registro en tabla `promotions_deleted`
+3. **Auditoría automática**: Se registra usuario, fecha y hora
+4. **Retención temporal**: 30 días de conservación
+5. **Purga automática**: Triggers de base de datos eliminan registros vencidos
+
+### 🔗 **Endpoints Disponibles**
+
+#### **REST API**
+- `DELETE /api/promotions/{id}?userId={userId}` - Eliminar promoción
+- `GET /api/promotions/trash` - Ver papelera completa  
+- `GET /api/promotions/trash/user/{userId}` - Ver papelera por usuario
+- `POST /api/promotions/{id}/restore?userId={userId}` - Restaurar promoción
+
+#### **GraphQL API**
+- `deletePromotion(id, userId)` - Eliminar promoción
+- `deletedPromotions` - Ver papelera completa
+- `deletedPromotionsByUser(userId)` - Ver papelera por usuario  
+- `restorePromotion(id, userId)` - Restaurar promoción
+
+### 🗃️ **Estructura de Datos**
+
+#### **PromotionDeletedDTO** - Respuesta completa
+```json
+{
+  "promotionId": 6,
+  "promotionName": "Beauty Week",
+  "description": "Promoción de productos de belleza",
+  "startDate": "2024-10-01",
+  "endDate": "2024-10-31", 
+  "discountValue": 25.0,
+  "statusId": 4,
+  "statusName": "INACTIVE",
+  "status": {
+    "statusId": 4,
+    "statusName": "INACTIVE"
+  },
+  "categoryId": 2,
+  "categoryName": "Beauty",
+  "category": {
+    "categoryId": 2,
+    "categoryName": "Beauty"
+  },
+  "userId": 1,
+  "userName": "Alice Johnson", 
+  "user": {
+    "userId": 1,
+    "userName": "Alice Johnson"
+  },
+  "deletedAt": "2024-10-29T15:30:45",
+  "deletedById": 1,
+  "deletedByName": "Alice Johnson",
+  "deletedBy": {
+    "userId": 1,
+    "userName": "Alice Johnson"
+  },
+  "daysUntilPurge": 29
+}
+```
+
+### 🎯 **Estados de Promociones**
+
+| Estado | ID | Descripción | En Papelera |
+|--------|----|-----------  |-------------|
+| `ACTIVE` | 1 | Promoción activa y visible | ❌ No |
+| `EXPIRED` | 2 | Promoción vencida pero visible | ❌ No |
+| `SCHEDULE` | 3 | Promoción programada para futuro | ❌ No |
+| `INACTIVE` | 4 | **Promoción eliminada (papelera)** | ✅ **Sí** |
+
+### 🔄 **Proceso de Restauración**
+
+1. **Consultar papelera**: Ver promociones eliminadas disponibles
+2. **Verificar elegibilidad**: Solo promociones con < 30 días
+3. **Ejecutar restauración**: Llamar endpoint de restauración
+4. **Cambio automático**: Status cambia de `INACTIVE` a `ACTIVE`
+5. **Remoción de papelera**: Se elimina de tabla `promotions_deleted`
+6. **Auditoría**: Se registra la restauración en logs
+
+### 💾 **Base de Datos Subyacente**
+
+#### **Triggers Implementados**
+- `trg_promotions_soft_delete` - Maneja eliminación y cambio de status
+- `trg_promotions_deleted_guard` - Previene duplicados en papelera
+- `trg_promotions_audit` - Registra todas las operaciones
+
+#### **Funciones de Base de Datos**
+- `fn_set_actor(user_id)` - Establece contexto de usuario
+- `fn_restore_promotion(promo_id, user_id)` - Restaura promoción completa  
+- `fn_purge_deleted_promotions()` - Limpieza automática (30 días)
 
 ## 🗄️ Base de Datos
 
@@ -1390,7 +1945,8 @@ Para problemas o preguntas:
 **📊 Resumen de Verificación:**
 - **Metodología**: Análisis automático de anotaciones `@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`
 - **Controllers verificados**: `AuthController`, `ProductController`, `PromotionController`, `CategoryController`
-- **Total de endpoints**: 21 endpoints REST confirmados como implementados
+- **Total de endpoints**: 25 endpoints REST confirmados como implementados
+- **Total de operaciones GraphQL**: 21 operaciones (16 queries + 5 mutations) + 3 schema mappings
 - **GraphQL**: 1 endpoint adicional verificado
 
 **✅ Estado de Implementación:**

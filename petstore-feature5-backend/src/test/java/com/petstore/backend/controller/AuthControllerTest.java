@@ -1,177 +1,245 @@
 package com.petstore.backend.controller;
 
-import com.petstore.backend.dto.LoginRequest;
-import com.petstore.backend.dto.LoginResponse;
-import com.petstore.backend.service.AuthService;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.petstore.backend.dto.LoginResponse;
+import com.petstore.backend.entity.Role;
+import com.petstore.backend.entity.User;
+import com.petstore.backend.repository.RoleRepository;
+import com.petstore.backend.repository.UserRepository;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@Transactional
+class AuthControllerTest {
 
-public class AuthControllerTest {
-    @Mock
-    private AuthService authService;
+    @Autowired
+    private MockMvc mockMvc;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private RoleRepository roleRepository;
 
-    @InjectMocks
-    private AuthController authController;
-
+    @Autowired
+    private ObjectMapper objectMapper;
+    
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-    }
-
-
-    @Test
-    void login_validCredentials_returnsOkResponse() {
-        // Arrange
-        LoginRequest request = new LoginRequest();
-        request.setEmail("admin@marketing.com");
-        request.setPassword("password123");
-
-        LoginResponse mockResponse = new LoginResponse(
-                "mockToken",
-                "Admin User",
-                "admin@marketing.com",
-                "MARKETING_ADMIN"
-        );
-
-        when(authService.authenticateMarketingAdmin(
-                request.getEmail(),
-                request.getPassword()
-        )).thenReturn(mockResponse);
-
-        // Act
-        ResponseEntity<LoginResponse> response = authController.login(request);
-
-        // Assert
-        assertEquals(200, response.getStatusCodeValue());
-        assertTrue(response.getBody().isSuccess());
-        assertEquals("mockToken", response.getBody().getToken());
-        assertEquals("admin@marketing.com", response.getBody().getEmail());
-        assertEquals("MARKETING_ADMIN", response.getBody().getRole());
-        verify(authService, times(1))
-                .authenticateMarketingAdmin(request.getEmail(), request.getPassword());
+        // Crear rol Marketing Admin si no existe
+        java.util.Optional<Role> roleOptional = roleRepository.findByRoleName("Marketing Admin");
+        Role marketingAdminRole;
+        if (roleOptional.isPresent()) {
+            marketingAdminRole = roleOptional.get();
+        } else {
+            marketingAdminRole = new Role("Marketing Admin");
+            roleRepository.save(marketingAdminRole);
+        }
+        
+        // Crear usuario admin@petstore.com si no existe
+        if (!userRepository.findByEmail("admin@petstore.com").isPresent()) {
+            User adminUser = new User();
+            adminUser.setUserName("Admin User");
+            adminUser.setEmail("admin@petstore.com");
+            adminUser.setPassword("admin123"); // En producción debería estar hasheado
+            adminUser.setRole(marketingAdminRole);
+            userRepository.save(adminUser);
+        }
     }
 
     @Test
-    void login_invalidCredentials_returnsUnauthorizedResponse() {
-        // Arrange
-        LoginRequest request = new LoginRequest();
-        request.setEmail("user@company.com");
-        request.setPassword("wrongpass");
-
-        when(authService.authenticateMarketingAdmin(
-                request.getEmail(),
-                request.getPassword()
-        )).thenThrow(new RuntimeException("Invalid credentials"));
-
-        // Act
-        ResponseEntity<LoginResponse> response = authController.login(request);
-
-        // Assert
-        assertEquals(401, response.getStatusCodeValue());
-        assertFalse(response.getBody().isSuccess());
-        assertTrue(response.getBody().getMessage().contains("Email o contraseña incorrectos"));
-        verify(authService, times(1))
-                .authenticateMarketingAdmin(request.getEmail(), request.getPassword());
+    void testGetStatus() throws Exception {
+        mockMvc.perform(get("/api/auth/status"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.service", is("Authentication Service")))
+                .andExpect(jsonPath("$.status", is("active")))
+                .andExpect(jsonPath("$.timestamp", notNullValue()))
+                .andExpect(jsonPath("$.endpoints", hasSize(5)));
     }
 
     @Test
-    void verifyToken_validToken_returnsOkResponse() {
-        // Arrange
-        String token = "validToken";
-        String authHeader = "Bearer " + token;
-        when(authService.validateToken(token)).thenReturn(true);
+    void testLoginEndpoint_ValidCredentials() throws Exception {
+        String loginRequest = """
+            {
+                "email": "admin@petstore.com",
+                "password": "admin123"
+            }
+            """;
 
-        // Act
-        ResponseEntity<?> response = authController.verifyToken(authHeader);
-
-        // Assert
-        assertEquals(200, response.getStatusCodeValue());
-        assertTrue(response.getBody().toString().contains("\"valid\": true"));
-        verify(authService, times(1)).validateToken(token);
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.token", notNullValue()))
+                .andExpect(jsonPath("$.email", is("admin@petstore.com")))
+                .andExpect(jsonPath("$.role", is("Marketing Admin")));
     }
 
     @Test
-    void verifyToken_invalidToken_returnsUnauthorized() {
-        // Arrange
-        String token = "invalidToken";
-        String authHeader = "Bearer " + token;
-        when(authService.validateToken(token)).thenReturn(false);
+    void testLoginEndpoint_InvalidCredentials() throws Exception {
+        String loginRequest = """
+            {
+                "email": "admin@petstore.com",
+                "password": "wrongpassword"
+            }
+            """;
 
-        // Act
-        ResponseEntity<?> response = authController.verifyToken(authHeader);
-
-        // Assert
-        assertEquals(401, response.getStatusCodeValue());
-        assertTrue(response.getBody().toString().contains("\"valid\": false"));
-        verify(authService, times(1)).validateToken(token);
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequest))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success", is(false)));
     }
 
     @Test
-    void verifyToken_exceptionThrown_returnsUnauthorized() {
-        // Arrange
-        String authHeader = "Bearer brokenToken";
-        when(authService.validateToken(anyString())).thenThrow(new RuntimeException("Error"));
+    void testLoginEndpoint_MissingFields() throws Exception {
+        String loginRequest = """
+            {
+                "email": "admin@petstore.com"
+            }
+            """;
 
-        // Act
-        ResponseEntity<?> response = authController.verifyToken(authHeader);
-
-        // Assert
-        assertEquals(401, response.getStatusCodeValue());
-        assertTrue(response.getBody().toString().contains("malformado"));
-        verify(authService, times(1)).validateToken(anyString());
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequest))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success", is(false)));
     }
 
     @Test
-    void getCurrentUser_validToken_returnsUserInfo() {
-        // Arrange
-        String token = "validToken";
-        String authHeader = "Bearer " + token;
-        Map<String, Object> mockUser = Map.of("username", "juan", "role", "USER");
-        when(authService.getUserFromToken(token)).thenReturn(mockUser);
+    void testVerifyEndpoint_WithValidToken() throws Exception {
+        // First login to get a valid token
+        String loginRequest = """
+            {
+                "email": "admin@petstore.com",
+                "password": "admin123"
+            }
+            """;
 
-        // Act
-        ResponseEntity<?> response = authController.getCurrentUser(authHeader);
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequest))
+                .andExpect(status().isOk())
+                .andReturn();
 
-        // Assert
-        assertEquals(200, response.getStatusCodeValue());
-        assertEquals(mockUser, response.getBody());
-        verify(authService, times(1)).getUserFromToken(token);
+        String loginResponse = loginResult.getResponse().getContentAsString();
+        LoginResponse response = objectMapper.readValue(loginResponse, LoginResponse.class);
+        String token = response.getToken();
+
+        // Use the valid token to verify
+        mockMvc.perform(get("/api/auth/verify")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid", is(true)));
     }
 
     @Test
-    void getCurrentUser_invalidToken_returnsUnauthorized() {
-        // Arrange
-        String token = "invalidToken";
-        String authHeader = "Bearer " + token;
-        when(authService.getUserFromToken(token)).thenThrow(new RuntimeException("Invalid"));
-
-        // Act
-        ResponseEntity<?> response = authController.getCurrentUser(authHeader);
-
-        // Assert
-        assertEquals(401, response.getStatusCodeValue());
-        assertTrue(response.getBody().toString().contains("Token inválido"));
-        verify(authService, times(1)).getUserFromToken(token);
+    void testVerifyEndpoint_WithoutToken() throws Exception {
+        mockMvc.perform(get("/api/auth/verify"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    void logout_returnsOkResponse() {
-        // Arrange (no dependencies que mockear)
+    void testVerifyEndpoint_WithInvalidToken() throws Exception {
+        mockMvc.perform(get("/api/auth/verify")
+                .header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.valid", is(false)));
+    }
 
-        // Act
-        ResponseEntity<?> response = authController.logout();
+    @Test
+    void testGetCurrentUser_WithValidToken() throws Exception {
+        // First login to get a valid token
+        String loginRequest = """
+            {
+                "email": "admin@petstore.com",
+                "password": "admin123"
+            }
+            """;
 
-        // Assert
-        assertEquals(200, response.getStatusCodeValue());
-        assertTrue(response.getBody().toString().contains("Logout exitoso"));
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginRequest))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String loginResponse = loginResult.getResponse().getContentAsString();
+        LoginResponse response = objectMapper.readValue(loginResponse, LoginResponse.class);
+        String token = response.getToken();
+
+        // Use the valid token to get current user
+        mockMvc.perform(get("/api/auth/me")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email", is("admin@petstore.com")))
+                .andExpect(jsonPath("$.role", is("Marketing Admin")));
+    }
+
+    @Test
+    void testLogout() throws Exception {
+        mockMvc.perform(post("/api/auth/logout")
+                .header("Authorization", "Bearer some-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message", is("Logout exitoso")));
+    }
+
+    @Test
+    void testLoginEndpoint_EmptyBody() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success", is(false)));
+    }
+
+    @Test
+    void testLoginEndpoint_InvalidJson() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("invalid json"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testGetStatus_CheckAllEndpoints() throws Exception {
+        mockMvc.perform(get("/api/auth/status"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.endpoints[0]", is("POST /api/auth/login - Login de Marketing Admin")))
+                .andExpect(jsonPath("$.endpoints[1]", is("GET /api/auth/verify - Verificar token")))
+                .andExpect(jsonPath("$.endpoints[2]", is("GET /api/auth/me - Obtener perfil del usuario")))
+                .andExpect(jsonPath("$.endpoints[3]", is("POST /api/auth/logout - Logout")))
+                .andExpect(jsonPath("$.endpoints[4]", is("GET /api/auth/status - Estado del servicio")));
+    }
+
+    @Test
+    void testOptionsRequest() throws Exception {
+        mockMvc.perform(options("/api/auth/login")
+                .header("Origin", "http://localhost:3000")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "Content-Type"))
+                .andExpect(status().isOk());
     }
 }

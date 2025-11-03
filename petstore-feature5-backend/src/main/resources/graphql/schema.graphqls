@@ -10,8 +10,15 @@ type Query {
     # Queries de promociones
     promotions: [Promotion!]!
     promotionsActive: [Promotion!]!
+    promotionsExpired: [Promotion!]!
+    promotionsScheduled: [Promotion!]!
+    promotionsByStatus(statusName: String!): [Promotion!]!
     promotionsByCategory(categoryId: ID!): [Promotion!]!
     promotion(id: ID!): Promotion
+    
+    # Queries de papelera temporal
+    deletedPromotions: [PromotionDeleted!]!
+    deletedPromotionsByUser(userId: ID!): [PromotionDeleted!]!
     
     # Queries de categorías
     categories: [Category!]!
@@ -30,7 +37,15 @@ type Mutation {
     # Mutaciones de promociones (solo admin)
     createPromotion(input: PromotionInput!): Promotion!
     updatePromotion(id: ID!, input: PromotionInput!): Promotion!
-    deletePromotion(id: ID!): Boolean!
+    deletePromotion(id: ID!, userId: ID): Boolean!
+    
+    # Mutaciones de asociación producto-promoción
+    associateProductsToPromotion(promotionId: ID!, productIds: [ID!]!): Promotion!
+    removeProductsFromPromotion(promotionId: ID!, productIds: [ID!]!): Promotion!
+    
+    # Mutaciones de papelera temporal
+    restorePromotion(id: ID!, userId: ID!): Boolean!
+    permanentDeletePromotion(id: ID!, userId: ID!): Boolean!
 }
 
 type Product {
@@ -56,7 +71,7 @@ type Promotion {
     description: String
     startDate: String!
     endDate: String!
-    discountValue: Float!
+    discountPercentage: Float!
     status: Status!
     user: User
     category: Category
@@ -80,6 +95,21 @@ type Role {
     roleName: String!
 }
 
+type PromotionDeleted {
+    promotionId: ID!
+    promotionName: String!
+    description: String
+    startDate: String!
+    endDate: String!
+    discountPercentage: Float!
+    status: Status!
+    user: User
+    category: Category
+    deletedAt: String!
+    deletedBy: User
+    daysUntilPurge: Int!
+}
+
 type GraphQLLoginResponse {
     token: String!
     user: User
@@ -91,7 +121,7 @@ input PromotionInput {
     description: String
     startDate: String!
     endDate: String!
-    discountValue: Float!
+    discountPercentage: Float!
     statusId: ID!
     userId: ID
     categoryId: ID

@@ -1,5 +1,7 @@
 package com.petstore.backend.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +22,9 @@ public class SecurityConfig {
     private final CorsConfigurationSource corsConfigurationSource;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final Environment environment;
+    private static final String PRODUCTAPIPATTERN = "/api/products/**";
+    Logger loggerMessage = LoggerFactory.getLogger(getClass());
+
 
     @Value("${app.security.whitelist:}")
     private String[] whitelistEndpoints;
@@ -39,6 +44,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 
                 // Deshabilitar CSRF para API REST/GraphQL
+                // CSRF protection is disabled because this backend uses JWT (Bearer token) authentication.
+                // Requests are stateless and do not rely on session cookies, making CSRF attacks not applicable.
                 .csrf(AbstractHttpConfigurer::disable)
                 
                 // Configurar headers de seguridad
@@ -60,9 +67,7 @@ public class SecurityConfig {
                 
                 // Agregar filtro JWT antes del filtro de autenticación de usuario/contraseña
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .sessionManagement(session -> 
-                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
+                
                 
                 // Configurar autorización de endpoints
                 .authorizeHttpRequests(authz -> {
@@ -76,41 +81,55 @@ public class SecurityConfig {
                                          java.util.Arrays.asList(activeProfiles).contains("production");
                     boolean isDevelopment = java.util.Arrays.asList(activeProfiles).contains("dev") ||
                                           java.util.Arrays.asList(activeProfiles).contains("development") ||
+                                          java.util.Arrays.asList(activeProfiles).contains("test") ||
                                           activeProfiles.length == 0; // Por defecto desarrollo
                     
-                    // Log del modo detectado
-                    System.out.println("🔍 Security Mode Detection:");
-                    System.out.println("   Active Profiles: " + java.util.Arrays.toString(activeProfiles));
-                    System.out.println("   Is Production: " + isProduction);
-                    System.out.println("   Is Development: " + isDevelopment);
+                    // Implementación de verificación condicional para satisfacer el analizador estricto:
+                    if (loggerMessage.isInfoEnabled()) {
+                        // Log del modo detectado
+                        loggerMessage.info("   Security Mode Detection:");
+                        loggerMessage.info("   Active Profiles: {} " , java.util.Arrays.toString(activeProfiles));
+                        loggerMessage.info("   Is Production: {}" , isProduction);
+                        loggerMessage.info("   Is Development: {}" , isDevelopment);
+                    }
                     
                     // GraphiQL y GraphQL SIEMPRE PÚBLICOS (tanto dev como prod)
                     authz.requestMatchers("/graphiql", "/graphiql/**").permitAll();
                     authz.requestMatchers("/graphql", "/graphql/**").permitAll();
                     
+                    // Swagger/OpenAPI endpoints públicos
+                    authz.requestMatchers("/swagger-ui/**", "/swagger-ui.html").permitAll();
+                    authz.requestMatchers("/api-docs/**", "/api-docs").permitAll();
+                    authz.requestMatchers("/v3/api-docs/**", "/v3/api-docs").permitAll();
+                    
                     if (isDevelopment) {
-                        // 🔓 MODO DESARROLLO: Más permisivo
+                        // MODO DESARROLLO: Más permisivo
                         authz.requestMatchers("/h2-console/**").permitAll(); // H2 Console para dev
                         authz.requestMatchers("/actuator/**").permitAll(); // Actuator para dev
                         authz.requestMatchers("/test", "/graphql-test").permitAll(); // Test endpoints
                         
                         // Productos públicos para testing en desarrollo
-                        authz.requestMatchers("GET", "/api/products/**").permitAll();
-                        authz.requestMatchers("POST", "/api/products/**").authenticated(); // Crear requiere auth
-                        authz.requestMatchers("PUT", "/api/products/**").authenticated(); // Actualizar requiere auth
-                        authz.requestMatchers("DELETE", "/api/products/**").authenticated(); // Eliminar requiere auth
+                        authz.requestMatchers("GET", PRODUCTAPIPATTERN).permitAll();
+                        authz.requestMatchers("POST", PRODUCTAPIPATTERN).authenticated(); // Crear requiere auth
+                        authz.requestMatchers("PUT", PRODUCTAPIPATTERN).authenticated(); // Actualizar requiere auth
+                        authz.requestMatchers("DELETE", PRODUCTAPIPATTERN).authenticated(); // Eliminar requiere auth
                         
                     } else {
-                        // 🔒 MODO PRODUCCIÓN: Más restrictivo
-                        authz.requestMatchers("/h2-console/**").denyAll(); // ❌ No H2 en producción
-                        authz.requestMatchers("/test", "/graphql-test").denyAll(); // ❌ No test endpoints
+                        // MODO PRODUCCIÓN: Más restrictivo
+                        authz.requestMatchers("/h2-console/**").denyAll(); //  No H2 en producción
+                        authz.requestMatchers("/test", "/graphql-test").denyAll(); //  No test endpoints
                         
                         // Solo actuator health público en producción
                         authz.requestMatchers("/actuator/**").authenticated();
                         
                         // Productos: solo lectura pública, modificaciones requieren auth
                         authz.requestMatchers("GET", "/api/products", "/api/products/category/*").permitAll();
-                        authz.requestMatchers("/api/products/**").authenticated();
+                        authz.requestMatchers(PRODUCTAPIPATTERN).authenticated();
+                    }
+                    
+                    // Whitelist adicional si está configurada (debe ir ANTES de las reglas específicas)
+                    if (whitelistEndpoints != null && whitelistEndpoints.length > 0) {
+                        authz.requestMatchers(whitelistEndpoints).permitAll();
                     }
                     
                     // Promociones siempre requieren autenticación (excepto algunas lecturas públicas)
@@ -124,12 +143,7 @@ public class SecurityConfig {
                     // Perfil de usuario siempre requiere autenticación
                     authz.requestMatchers("/api/auth/me", "/api/auth/verify").authenticated();
                     
-                    // Whitelist adicional si está configurada
-                    if (whitelistEndpoints != null && whitelistEndpoints.length > 0) {
-                        authz.requestMatchers(whitelistEndpoints).permitAll();
-                    }
-                    
-                    // Todo lo demás requiere autenticación
+                    // lo demás requiere autenticación
                     authz.anyRequest().authenticated();
                 })
                 

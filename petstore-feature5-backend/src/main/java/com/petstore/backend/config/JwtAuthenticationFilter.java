@@ -1,11 +1,7 @@
 package com.petstore.backend.config;
 
-import com.petstore.backend.service.AuthService;
-import com.petstore.backend.util.JwtUtil;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,12 +10,18 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
+import com.petstore.backend.service.AuthService;
+import com.petstore.backend.util.JwtUtil;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private static final Logger jwtLogger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
     
     private final JwtUtil jwtUtil;
     private final AuthService authService;
@@ -55,7 +57,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             } catch (Exception e) {
                 // Si hay error al cargar el usuario, continuar sin autenticar
-                logger.debug("No se pudo autenticar el usuario: " + e.getMessage());
+                jwtLogger.debug("No se pudo autenticar el usuario: {}", e.getMessage());
             }
         }
 

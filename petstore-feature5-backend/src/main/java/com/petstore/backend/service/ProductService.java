@@ -1,25 +1,24 @@
 package com.petstore.backend.service;
 
 
-import com.petstore.backend.entity.Product;
-import com.petstore.backend.repository.CategoryRepository;
-import com.petstore.backend.repository.ProductRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
+import com.petstore.backend.entity.Product;
+import com.petstore.backend.repository.ProductRepository;
 
 @Service
 @Transactional
 public class ProductService {
 
-    @Autowired
-    private ProductRepository productRepository;
-    
-    @Autowired
-    private CategoryRepository categoryRepository;
+    private final ProductRepository productRepository; // Inyección de dependencia del repositorio de productos
+
+    public ProductService(ProductRepository productRepository) {
+        this.productRepository = productRepository;
+    }
 
     /**
      * Encuentra todos los productos
@@ -68,6 +67,13 @@ public class ProductService {
      */
     public List<Product> findByPriceBetween(Double minPrice, Double maxPrice) {
         return productRepository.findByBasePriceBetween(minPrice, maxPrice);
+    }
+
+    /**
+     * Encuentra productos por ID de promoción
+     */
+    public List<Product> findByPromotionId(Integer promotionId) {
+        return productRepository.findByPromotionPromotionId(promotionId);
     }
 
     /**
